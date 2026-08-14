@@ -3,10 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_template/core/network/endpoints.dart';
 
 void main() {
-  test('template uses the mock API by default', () {
-    Endpoints.setServerUrl(Endpoints.mockServerUrl);
+  test('Endpoints.baseURL appends the unversioned /api path to the server URL', () {
+    Endpoints.setServerUrl('https://example.com');
 
-    expect(Endpoints.isMockServer, isTrue);
-    expect(Endpoints.baseURL, 'https://mock.example.com/api/v1');
+    expect(Endpoints.baseURL, 'https://example.com/api');
   });
 }

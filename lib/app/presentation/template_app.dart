@@ -4,12 +4,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../../core/di/di.dart';
 import '../../core/routing/app_router.dart';
-import '../../core/routing/routes.dart';
+import '../../core/routing/route_tracker.dart';
 import '../../core/theme/app_theme_data.dart';
-import '../../core/utils/app_enums.dart';
 import '../../generated/l10n.dart';
 import 'cubit/app_cubit.dart';
 import 'cubit/app_state.dart';
+import 'pages/auth_gate.dart';
+import 'widgets/connectivity_watcher.dart';
 
 class TemplateApp extends StatelessWidget {
   final AppRouter appRouter;
@@ -17,25 +18,29 @@ class TemplateApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<AppCubit, AppState, Language>(
-      selector: (state) {
-        return state.language;
-      },
-      builder: (context, language) {
+    return BlocBuilder<AppCubit, AppState>(
+      builder: (context, state) {
         return MaterialApp(
-          title: 'App Template',
+          title: 'ثقة',
           debugShowCheckedModeBanner: false,
           navigatorKey: getIt<GlobalKey<NavigatorState>>(),
-          theme: AppThemeData.appTheme(language),
+          navigatorObservers: [getIt<RouteTracker>()],
+          // Light-only app — no dark mode, so no themeMode/darkTheme wiring.
+          theme: AppThemeData.light(state.language),
           builder: (context, child) {
-            return MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: const TextScaler.linear(1)),
-              child: child!,
+            // ConnectivityWatcher sits here, above the navigator, so it
+            // survives the `pushNamedAndRemoveUntil` calls that replace the
+            // whole route stack — see its doc comment.
+            return ConnectivityWatcher(
+              child: MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(1)),
+                child: child!,
+              ),
             );
           },
-          initialRoute: Routes.exampleItems,
+          home: const AuthGate(),
           onGenerateRoute: appRouter.generateRoute,
           localizationsDelegates: const [
             S.delegate,
@@ -44,7 +49,7 @@ class TemplateApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: S.delegate.supportedLocales,
-          locale: Locale(language.name),
+          locale: Locale(state.language.name),
         );
       },
     );

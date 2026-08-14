@@ -55,3 +55,28 @@ class ParsingJsonException extends GenericExceptions {
     return 'ParsingJsonException{className: $className, exceptionMessage: $exceptionMessage, exceptionCode: $exceptionCode}';
   }
 }
+
+// NOTE(migration): backend-specific error `code` values — see
+// ErrorHandler.handleExceptionError's code detection and failures.dart.
+
+class DeviceMismatchException extends GenericExceptions {
+  DeviceMismatchException() : super('تم تسجيل الدخول من جهاز آخر. تواصل مع الإدارة', 403);
+}
+
+class AccountInactiveException extends GenericExceptions {
+  AccountInactiveException() : super('تم إيقاف حسابك. تواصل مع الإدارة', 403);
+}
+
+class NotSubscribedException extends GenericExceptions {
+  NotSubscribedException() : super('أنت غير مشترك في هذه المادة', 403);
+}
+
+/// The lesson's video is still transcoding on BunnyCDN (backend code
+/// VIDEO_PROCESSING) — not an error, just "try again in a bit".
+class VideoProcessingException extends GenericExceptions {
+  VideoProcessingException() : super('الفيديو قيد المعالجة، حاول لاحقاً', null);
+}
+
+class ValidationRequiredException extends GenericExceptions {
+  ValidationRequiredException() : super('VALIDATION_REQUIRED', null);
+}

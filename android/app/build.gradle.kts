@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -9,7 +10,10 @@ dependencies {
 }
 
 android {
-    namespace = "com.example.mobile_template"
+    // NOTE(migration): matches OLD app exactly (namespace and applicationId
+    // intentionally differ there too — namespace only affects the generated
+    // R/BuildConfig package, applicationId is the real Play Store identity).
+    namespace = "com.edushield.edushield_student"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,8 +24,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.mobile_template"
+        applicationId = "com.edushield.student"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -36,6 +39,16 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+}
+
+// Kotlin's default JVM target drifts ahead of compileOptions' Java 17 on newer
+// Kotlin Gradle Plugin versions, which fails the build ("Inconsistent JVM
+// Target Compatibility"). Pin it explicitly via the non-deprecated
+// compilerOptions DSL (android.kotlinOptions is deprecated on AGP 9).
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 

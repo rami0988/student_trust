@@ -6,8 +6,12 @@
     <!-- Android 13+ runtime permission for notifications. Requested by
          NotificationsHelper._requestPermissions(); remove if you don't use push. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Saving worksheet PDFs to the public Downloads folder (legacy storage
+         permission is only needed/grantable on older Android versions). -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <application
-        android:label="App Template"
+        android:label="ثقة"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -15,6 +19,7 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
+            android:screenOrientation="portrait"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"

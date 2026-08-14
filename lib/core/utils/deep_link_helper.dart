@@ -4,15 +4,10 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../features/example_feature/presentation/pages/example_item_details_args.dart';
-import '../extensions/navigation.dart';
-import '../routing/routes.dart';
-
 /// Deep-link plumbing (app_links).
 ///
-/// TODO(template): adjust [_handleUri] to your own link scheme. The example
-/// below handles `https://your.domain/app/item/<id>` by opening the example
-/// item details page.
+/// TODO(migration): wire [_handleUri] to a real link scheme (e.g. a lesson or
+/// worksheet share link) once one is defined — no deep links exist yet.
 @lazySingleton
 class DeepLinkHelper {
   final AppLinks _appLinks = AppLinks();
@@ -28,21 +23,9 @@ class DeepLinkHelper {
   }
 
   void _handleUri(Uri uri) {
-    final List<String> segments = uri.pathSegments;
-
-    if (segments.length >= 2 && segments[segments.length - 2] == 'item') {
-      final int? id = int.tryParse(segments.last);
-      if (id != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final BuildContext? context = _navigatorKey.currentState?.context;
-          if (context == null) return;
-          context.pushNamed(
-            Routes.exampleItemDetails,
-            arguments: ExampleItemDetailsArgs(itemId: id),
-          );
-        });
-      }
-    }
+    final NavigatorState? navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+    // TODO(migration): implement once a real deep-link scheme exists.
   }
 
   void dispose() {

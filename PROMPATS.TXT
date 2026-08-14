@@ -1,0 +1,179 @@
+Refactor ALL UI screens in the project to be pixel-perfect, modern, and professionally polished.
+
+**Design System to follow (from the template):**
+- `ColorsManager` — use only these colors, no hardcoded hex values.
+- `FontManager` — Tajawal/Cairo, language-aware.
+- `CustomScaffold` — use for every screen (colored header + white sheet pattern).
+- Shared widgets in `lib/core/widgets/` — `CustomTextField`, `CustomButton`, `Loader`, `ErrorView`, `EmptyView`, `NetworkImageWidget`, etc.
+
+**Requirements for EVERY screen:**
+
+1. **Layout & Spacing**
+   - Use consistent `EdgeInsets` (16px horizontal as base, 12px/20px vertical).
+   - No random padding — create a `AppDimens` constant file if needed.
+   - Proper use of `SafeArea`, `SliverAppBar`, or `CustomScrollView` for scrollable content.
+
+2. **Typography**
+   - Hierarchy: Headline (22-24, bold) → Title (18, semi-bold) → Body (14-16, regular) → Caption (12).
+   - Use `FontManager` weights correctly — never use `fontWeight: FontWeight.w300` directly, use the theme.
+   - Text colors from `ColorsManager.textPrimary`, `textSecondary`, `textHint`.
+
+3. **Components**
+   - Buttons: `CustomButton` with proper loading state, disabled state, and ripple effect.
+   - Cards: rounded corners (12-16px), subtle shadow (`BoxShadow` with opacity 0.08-0.12), white background.
+   - TextFields: consistent border radius, focused state color from `ColorsManager.primary`, proper error styling.
+   - Lists: use `ListView.separated` with `Divider` or spacing, never raw `ListView.builder` without separators.
+
+4. **Images & Icons**
+   - All images use `NetworkImageWidget` with shimmer placeholder and error fallback.
+   - Icons from `IconsManager` (centralized) or `Icons.` with consistent size (20-24) and color from theme.
+   - SVG support via `flutter_svg` where appropriate.
+
+5. **States & Feedback**
+   - Loading: use shimmer skeletons (from core widgets), not just a circular spinner.
+   - Empty: `EmptyView` with illustration + descriptive text + optional action button.
+   - Error: `ErrorView` with retry button, clear error message, no raw red text.
+   - Success: subtle toast or `showToastMessage`, no `SnackBar` directly in pages.
+
+6. **Animations**
+   - Page transitions: use the app's `AppRouter` transitions, add `FadeTransition` or `SlideTransition` where appropriate.
+   - List items: staggered animation on load (`AnimationController` + `Interval`).
+   - Button presses: `InkWell` ripple or subtle scale animation (`AnimatedScale`).
+   - State changes: smooth `AnimatedSwitcher` between loading/content/error.
+
+7. **Accessibility & RTL**
+   - Everything must work perfectly in RTL (Arabic-first).
+   - Minimum touch target 48x48.
+   - Proper `Semantics` labels on icons and buttons.
+
+8. **No Business Logic in UI**
+   - Pages remain dumb — only display data from bloc/cubit state.
+   - No `if (response.statusCode == 200)` in widgets.
+   - Navigation via injected `GlobalKey&lt;NavigatorState&gt;`, not `BuildContext` hacks.
+
+**Execute screen by screen. Start with the most important flows (login, home, list, details).**
+
+
+/////////////////
+
+Add professional micro-interactions and animations to all screens without breaking the Clean Architecture.
+
+**Animations to add:**
+
+1. **Page Transitions**
+   - Hero animations between list → detail screens (shared image + title).
+   - Custom route transitions: slide from right (RTL-aware), fade for dialogs.
+   - Duration: 250-350ms, curve: `Curves.easeInOutCubic`.
+
+2. **List Animations**
+   - Staggered list item entrance: each item fades + slides up with 50ms delay.
+   - Use `AnimatedList` or wrap items in `AnimatedBuilder`.
+   - Pull-to-refresh: custom `CupertinoSliverRefreshControl` or smooth `RefreshIndicator`.
+
+3. **Interactive Elements**
+   - Buttons: `AnimatedScale` on press (scale 0.96), `AnimatedContainer` for color transitions.
+   - Cards: subtle elevation increase on hover/press (`AnimatedPhysicalModel`).
+   - Like/favorite: heart icon burst animation (`AnimatedIcon` or custom tween).
+   - Bottom sheets: smooth slide-up with backdrop fade.
+
+4. **Skeleton Loading**
+   - Replace all `CircularProgressIndicator` in lists with shimmer skeletons.
+   - Skeleton must match the final layout shape (if card has image + 2 text lines, skeleton mirrors that exactly).
+   - Use `Shimmer` widget from core or `Skeletonizer` package.
+
+5. **Empty & Error States**
+   - `Lottie` animation for empty states (subtle, not distracting).
+   - Error state: shake animation on the retry button when tapped.
+   - No data: fade-in illustration after 300ms.
+
+6. **Form Interactions**
+   - TextField: underline expands from center on focus.
+   - Validation error: field shakes + error text slides down.
+   - Success: checkmark morphs from input border.
+
+**Rules:**
+- All animations must be disposed in `dispose()` or `close()`.
+- No animation logic in the UI layer — use dedicated animation widgets or controllers managed by the page.
+- Keep 60fps — no heavy rebuilds inside `AnimatedBuilder`.
+- Respect `ReducedMotion` accessibility setting.
+
+///////////////////
+Make every screen responsive and adaptive across all device sizes (phone, tablet, foldable).
+
+**Breakpoints:**
+- Mobile: &lt; 600px
+- Tablet: 600-900px
+- Desktop/Large: &gt; 900px
+
+**Implementation rules:**
+
+1. **Layout**
+   - Use `LayoutBuilder` or `MediaQuery` at the PAGE level only, pass size info down.
+   - Lists on tablet: 2-column grid (`GridView` with `SliverGridDelegateWithFixedCrossAxisCount`).
+   - Details on tablet: master-detail flow (list on left, details on right).
+   - Dialogs on large screens: show as centered dialog, not full-screen bottom sheet.
+
+2. **Spacing**
+   - Horizontal padding: 16 (mobile), 24 (tablet), 32 (desktop).
+   - Max content width: 600px on mobile, 800px on tablet — center with `Center` + `ConstrainedBox`.
+
+3. **Typography Scale**
+   - Headlines: 22 (mobile), 26 (tablet), 30 (desktop).
+   - Body: 14 (mobile), 16 (tablet).
+   - Use `ResponsiveText` helper if available, or scale via `textScaleFactor`.
+
+4. **Navigation**
+   - Mobile: bottom navigation bar or drawer.
+   - Tablet: rail navigation (`NavigationRail`) on the left.
+   - Desktop: sidebar + top bar.
+
+5. **Images**
+   - Use `AspectRatio` everywhere — no distorted images.
+   - Cache width based on screen size: `cacheWidth: (MediaQuery.of(context).size.width * devicePixelRatio).toInt()`.
+
+6. **Orientation**
+   - All screens must work in portrait AND landscape.
+   - Lock orientation only where absolutely necessary (e.g., video player).
+
+**Do NOT:**
+- Put `MediaQuery` checks inside small widgets — pass constraints from parent.
+- Use fixed `double` widths for cards (use `FractionallySizedBox` or `Expanded`).
+/////////////////////
+Implement a complete, professional theming system following the template's architecture.
+
+**Current setup:**
+- `AppThemeData.appTheme(language)` returns `ThemeData`.
+- `ColorsManager` holds the palette.
+- `AppCubit` manages language + theme rebuild.
+
+**Requirements:**
+
+1. **Color System**
+   - Define semantic colors: `primary`, `secondary`, `background`, `surface`, `error`, `success`, `warning`.
+   - Each semantic color has light and dark variant in `ColorsManager`.
+   - Never use `Colors.white` or `Colors.black` directly — always from theme.
+
+2. **Dark Mode**
+   - Add `ThemeMode` support in `AppCubit` and `MaterialApp`.
+   - Dark theme: surface `#121212`, background `#000000`, elevated surface `#1E1E1E`.
+   - Text: high emphasis 87%, medium 60%, disabled 38% (Material standards).
+   - Images: subtle dark overlay or use `ColorFiltered` for placeholders.
+
+3. **Component Themes**
+   - `CardTheme`: elevation 0-1 in dark, 2-4 in light, shape `RoundedRectangleBorder(12)`.
+   - `ElevatedButtonTheme`: minimum height 48, border radius 12, padding `EdgeInsets.symmetric(horizontal: 24)`.
+   - `InputDecorationTheme`: filled true, fill color `surface`, focused border 2px primary, error border 1px error.
+   - `AppBarTheme`: transparent or surface color, elevation 0, centered title.
+
+4. **Shadows**
+   - Light mode: `BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 24, offset: Offset(0, 8))`.
+   - Dark mode: minimal or no shadow, use borders/separation lines instead.
+
+5. **Dynamic Colors (Optional)**
+   - If using Android 12+, support `DynamicColorBuilder` with fallback to brand colors.
+
+6. **Consistency Check**
+   - Every `Container` must derive color from theme — audit all hardcoded colors.
+   - Every screen must look native in both light and dark.
+
+**Output:** Updated `ColorsManager`, `AppThemeData`, and refactored widgets to use theme exclusively.

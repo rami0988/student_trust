@@ -20,65 +20,153 @@ typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 class MessageLookup extends MessageLookupByLibrary {
   String get localeName => 'en';
 
-  static String m0(count) =>
-      "${Intl.plural(count, one: '${count} day ago', other: '${count} days ago')}";
+  static String m0(count) => "${count} downloaded";
 
-  static String m1(count) =>
-      "${Intl.plural(count, one: '${count} hour ago', other: '${count} hours ago')}";
+  static String m1(count) => "${count} files";
 
-  static String m2(count) =>
-      "${Intl.plural(count, one: '${count} min ago', other: '${count} mins ago')}";
+  static String m2(count) => "${count} solution videos";
 
   static String m3(count) =>
-      "${Intl.plural(count, one: '${count} month ago', other: '${count} months ago')}";
+      "${Intl.plural(count, one: '${count} day ago', other: '${count} days ago')}";
 
   static String m4(count) =>
+      "${Intl.plural(count, one: '${count} hour ago', other: '${count} hours ago')}";
+
+  static String m5(count) =>
+      "${Intl.plural(count, one: '${count} min ago', other: '${count} mins ago')}";
+
+  static String m6(count) =>
+      "${Intl.plural(count, one: '${count} month ago', other: '${count} months ago')}";
+
+  static String m7(count) =>
       "${Intl.plural(count, one: '${count} year ago', other: '${count} years ago')}";
+
+  static String m8(count) => "Worksheets (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
     "PleaseEnterEmail": MessageLookupByLibrary.simpleMessage(
       "Please enter your email",
     ),
+    "appName": MessageLookupByLibrary.simpleMessage("Thiqa"),
+    "appTheme": MessageLookupByLibrary.simpleMessage("Appearance"),
+    "appVersion": MessageLookupByLibrary.simpleMessage("App version"),
+    "arabic": MessageLookupByLibrary.simpleMessage("Arabic"),
+    "availableOffline": MessageLookupByLibrary.simpleMessage(
+      "Available offline",
+    ),
     "back": MessageLookupByLibrary.simpleMessage("Back"),
+    "cancelDownload": MessageLookupByLibrary.simpleMessage("Cancel download"),
+    "chapters": MessageLookupByLibrary.simpleMessage("Chapters"),
+    "comingSoon": MessageLookupByLibrary.simpleMessage("Coming soon"),
+    "completed": MessageLookupByLibrary.simpleMessage("Completed"),
+    "contactUs": MessageLookupByLibrary.simpleMessage("Contact us"),
+    "contactUsMessage": MessageLookupByLibrary.simpleMessage(
+      "Email us and we\'ll get back to you shortly:",
+    ),
+    "copy": MessageLookupByLibrary.simpleMessage("Copy"),
+    "delete": MessageLookupByLibrary.simpleMessage("Delete"),
+    "deleteAccount": MessageLookupByLibrary.simpleMessage("Delete account"),
+    "deleteAccountConfirm": MessageLookupByLibrary.simpleMessage(
+      "Your account will be permanently deleted and this cannot be undone. Are you sure?",
+    ),
+    "deleteAccountFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t delete the account, please try again",
+    ),
+    "deleteDownload": MessageLookupByLibrary.simpleMessage("Delete download"),
+    "deleteDownloadConfirm": MessageLookupByLibrary.simpleMessage(
+      "Remove this lesson from your downloads?",
+    ),
+    "download": MessageLookupByLibrary.simpleMessage("Download"),
+    "downloadToDeviceTooltip": MessageLookupByLibrary.simpleMessage(
+      "Download to device",
+    ),
+    "downloaded": MessageLookupByLibrary.simpleMessage("Downloaded"),
+    "downloadsCount": m0,
+    "downloadsTitle": MessageLookupByLibrary.simpleMessage("Downloads"),
+    "emailCopied": MessageLookupByLibrary.simpleMessage("Email copied"),
     "emailFormatNotCorrect": MessageLookupByLibrary.simpleMessage(
       "Email format is not correct",
     ),
-    "emptyExampleItemsSubtitle": MessageLookupByLibrary.simpleMessage(
-      "Pull to refresh and try again",
+    "emulatorDetectedMessage": MessageLookupByLibrary.simpleMessage(
+      "This app is running on an emulator.\nIt can only run on a physical device.",
     ),
-    "emptyExampleItemsTitle": MessageLookupByLibrary.simpleMessage(
-      "No items yet",
-    ),
-    "exampleItems": MessageLookupByLibrary.simpleMessage("Example items"),
-    "exampleItemsSubtitle": MessageLookupByLibrary.simpleMessage(
-      "A reference feature you can copy",
-    ),
+    "english": MessageLookupByLibrary.simpleMessage("English"),
+    "enterFullscreen": MessageLookupByLibrary.simpleMessage("Fullscreen"),
+    "exitFullscreen": MessageLookupByLibrary.simpleMessage("Exit fullscreen"),
     "failedToLoadDataPleaseTryAgain": MessageLookupByLibrary.simpleMessage(
       "Failed to load saved data, please try again",
     ),
     "fieldIsRequired": MessageLookupByLibrary.simpleMessage(
       "This field is required",
     ),
+    "filesCount": m1,
+    "filesSectionTitle": MessageLookupByLibrary.simpleMessage("Files"),
     "fullNameCanOnlyContainLettersOrSpaces":
         MessageLookupByLibrary.simpleMessage(
           "Full name can only contain letters or spaces",
         ),
+    "genericError": MessageLookupByLibrary.simpleMessage(
+      "An unexpected error occurred",
+    ),
+    "gradeBac": MessageLookupByLibrary.simpleMessage("Baccalaureate"),
+    "gradeGeneral": MessageLookupByLibrary.simpleMessage("General"),
+    "gradeNine": MessageLookupByLibrary.simpleMessage("9th grade"),
+    "language": MessageLookupByLibrary.simpleMessage("Language"),
+    "lessons": MessageLookupByLibrary.simpleMessage("Lessons"),
+    "loginButton": MessageLookupByLibrary.simpleMessage("Log in"),
+    "loginSubtitle": MessageLookupByLibrary.simpleMessage("We meet at the top"),
+    "logout": MessageLookupByLibrary.simpleMessage("Log out"),
+    "logoutConfirm": MessageLookupByLibrary.simpleMessage(
+      "Are you sure you want to log out?",
+    ),
     "networkErrorSubtitle": MessageLookupByLibrary.simpleMessage(
       "It seems you\'re not connected to the internet. Please check your connection and try again.",
     ),
     "networkErrorTitle": MessageLookupByLibrary.simpleMessage(
       "No Internet Connection",
     ),
+    "noChapters": MessageLookupByLibrary.simpleMessage("No chapters available"),
+    "noDownloadedVideos": MessageLookupByLibrary.simpleMessage(
+      "No downloaded videos",
+    ),
+    "noDownloadedVideosSubtitle": MessageLookupByLibrary.simpleMessage(
+      "Download videos while online to watch them later",
+    ),
+    "noFiles": MessageLookupByLibrary.simpleMessage("No files"),
+    "noLessons": MessageLookupByLibrary.simpleMessage("No lessons available"),
+    "noSearchResults": MessageLookupByLibrary.simpleMessage(
+      "No subjects match your search",
+    ),
+    "noSolutionVideos": MessageLookupByLibrary.simpleMessage(
+      "No solution videos",
+    ),
+    "noSubjects": MessageLookupByLibrary.simpleMessage("No subjects available"),
+    "noWorksheets": MessageLookupByLibrary.simpleMessage("No worksheets yet"),
+    "notSubscribed": MessageLookupByLibrary.simpleMessage("Not subscribed"),
+    "notifications": MessageLookupByLibrary.simpleMessage("Notifications"),
+    "offlineBanner": MessageLookupByLibrary.simpleMessage(
+      "You\'re offline — showing downloads only",
+    ),
+    "offlineIndicator": MessageLookupByLibrary.simpleMessage("Offline"),
     "oopsSomethingWentWrongPleaseTryAgain":
         MessageLookupByLibrary.simpleMessage(
           "Oops! Something went wrong. Please try again",
         ),
+    "open": MessageLookupByLibrary.simpleMessage("Open"),
+    "password": MessageLookupByLibrary.simpleMessage("Password"),
+    "passwordRequired": MessageLookupByLibrary.simpleMessage(
+      "Password is required",
+    ),
     "passwordShouldAtLeast8Character": MessageLookupByLibrary.simpleMessage(
       "Password should be at least 8 characters",
     ),
     "passwordsDoNotMatch": MessageLookupByLibrary.simpleMessage(
       "Passwords do not match",
+    ),
+    "pauseDownload": MessageLookupByLibrary.simpleMessage("Pause"),
+    "pdfDisplayError": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t display the file",
     ),
     "phoneNumber": MessageLookupByLibrary.simpleMessage("Phone Number"),
     "pleaseCompleteVerificationCode": MessageLookupByLibrary.simpleMessage(
@@ -102,8 +190,19 @@ class MessageLookup extends MessageLookupByLibrary {
     "pleaseEnterYourFullName": MessageLookupByLibrary.simpleMessage(
       "Please enter your full name",
     ),
+    "recordingDetected": MessageLookupByLibrary.simpleMessage(
+      "Screen recording detected\nStop the recording app to continue",
+    ),
+    "resumeDownload": MessageLookupByLibrary.simpleMessage("Resume"),
     "retry": MessageLookupByLibrary.simpleMessage("Try Again"),
+    "retryConnection": MessageLookupByLibrary.simpleMessage("Retry connection"),
+    "savedToDownloads": MessageLookupByLibrary.simpleMessage(
+      "File saved to your Downloads folder",
+    ),
     "search": MessageLookupByLibrary.simpleMessage("Search"),
+    "searchSubjectHint": MessageLookupByLibrary.simpleMessage(
+      "Search a subject...",
+    ),
     "selectCountry": MessageLookupByLibrary.simpleMessage("Select Country"),
     "serverErrorOccurredPleaseTryAgain": MessageLookupByLibrary.simpleMessage(
       "A server error occurred, please try again later",
@@ -112,11 +211,28 @@ class MessageLookup extends MessageLookupByLibrary {
       "Sorry, something went wrong on our end. We\'re working on it — please try again later.",
     ),
     "serverErrorTitle": MessageLookupByLibrary.simpleMessage("Server Error"),
+    "settings": MessageLookupByLibrary.simpleMessage("Settings"),
+    "settingsAccountSection": MessageLookupByLibrary.simpleMessage("Account"),
+    "settingsAppSection": MessageLookupByLibrary.simpleMessage("App"),
+    "settingsDangerSection": MessageLookupByLibrary.simpleMessage(
+      "Danger zone",
+    ),
+    "settingsSupportSection": MessageLookupByLibrary.simpleMessage("Support"),
     "showLess": MessageLookupByLibrary.simpleMessage("Show Less"),
     "showMore": MessageLookupByLibrary.simpleMessage("Show More"),
+    "solutionVideosCount": m2,
+    "solutionsSectionTitle": MessageLookupByLibrary.simpleMessage(
+      "Explanation & Solution",
+    ),
     "somethingWentWrong": MessageLookupByLibrary.simpleMessage(
       "Oops! Something went wrong",
     ),
+    "stillOffline": MessageLookupByLibrary.simpleMessage(
+      "Still no internet connection",
+    ),
+    "studentLabel": MessageLookupByLibrary.simpleMessage("Student"),
+    "subjects": MessageLookupByLibrary.simpleMessage("Subjects"),
+    "subscribed": MessageLookupByLibrary.simpleMessage("Subscribed"),
     "syrianPhoneNumbersShouldBe10DigitsPleaseCheckAndTryAgain":
         MessageLookupByLibrary.simpleMessage(
           "Syrian phone numbers should be 10 digits, please check and try again",
@@ -125,16 +241,32 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage(
           "Syrian phone numbers should be 9 digits, please check and try again",
         ),
+    "themeModeDark": MessageLookupByLibrary.simpleMessage("Dark"),
+    "themeModeLight": MessageLookupByLibrary.simpleMessage("Light"),
+    "themeModeSystem": MessageLookupByLibrary.simpleMessage("Match system"),
     "thereIsProblemWithYourConnectionPleaseTryAgain":
         MessageLookupByLibrary.simpleMessage(
           "There is problem with your connection, please try again",
         ),
-    "timeAgoDays": m0,
-    "timeAgoHours": m1,
-    "timeAgoMinutes": m2,
-    "timeAgoMonths": m3,
+    "timeAgoDays": m3,
+    "timeAgoHours": m4,
+    "timeAgoMinutes": m5,
+    "timeAgoMonths": m6,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("just now"),
-    "timeAgoYears": m4,
+    "timeAgoYears": m7,
+    "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("Unsafe device"),
+    "username": MessageLookupByLibrary.simpleMessage("Username"),
+    "usernameRequired": MessageLookupByLibrary.simpleMessage(
+      "Username is required",
+    ),
+    "validationRequired": MessageLookupByLibrary.simpleMessage(
+      "Please connect to the internet to verify your subscription",
+    ),
+    "videoPaused": MessageLookupByLibrary.simpleMessage("Video paused"),
+    "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
+      "Video is processing\nTry again shortly",
+    ),
+    "worksheetsWithCount": m8,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "Your password must contain at least 8 characters including letters and numbers",

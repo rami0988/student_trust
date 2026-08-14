@@ -8,18 +8,50 @@ abstract class Endpoints {
   }
 
   static String _serverURL = '';
-  static String get baseURL => '$_serverURL/api/v1';
+  // NOTE(migration): confirmed with the backend owner that this API is raw
+  // JSON, unversioned, at '/api' (no envelope, no '/v1') — matches OLD app's
+  // ApiConstants.baseUrl. Template default was '$_serverURL/api/v1'; changed
+  // to match the real contract. See data sources in each migrated feature:
+  // they bypass BaseRemoteDataSourceImpl.performXRequest (which requires the
+  // {success, message, data, meta} envelope) and parse raw responses instead.
+  static String get baseURL => '$_serverURL/api';
 
-  /// Placeholder server URL that activates the bundled [MockApiInterceptor],
-  /// so the template runs end-to-end without a backend.
-  /// Replace the `Endpoints.setServerUrl(...)` calls in main.dart /
-  /// main_development.dart with your real server URLs.
-  static const String mockServerUrl = 'https://mock.example.com';
+  /// *** Auth ***
+  static const String login = '/auth/login';
+  static const String refreshToken = '/auth/refresh';
+  static const String deleteAccount = '/auth/account';
 
-  static bool get isMockServer => _serverURL == mockServerUrl;
+  /// *** Subjects ***
+  static const String subjects = '/student/subjects';
 
-  /// *** Example Feature ***
-  static const String exampleItems = '/example-items';
-  static String exampleItemById(int id) => '/example-items/$id';
-  static String likeExampleItem(int id) => '/example-items/$id/like';
+  /// *** Chapters ***
+  static String chapters(String subjectId) => '/student/subjects/$subjectId/chapters';
+
+  /// *** Lessons ***
+  static String lessons(String chapterId) => '/student/chapters/$chapterId/lessons';
+  static const String progress = '/student/progress';
+
+  /// *** Video ***
+  static String videoStream(String lessonId) => '/video/stream/$lessonId';
+
+  /// *** Downloads ***
+  static const String registerDownload = '/student/downloads';
+  static String validateDownload(String lessonId) => '/student/downloads/$lessonId/validate';
+
+  /// *** Worksheets *** (read-only for students)
+  static String worksheetsByChapter(String chapterId) => '/worksheets/chapter/$chapterId';
+  static String worksheetFiles(String worksheetId) => '/worksheets/$worksheetId/files';
+  static String worksheetVideos(String worksheetId) => '/worksheets/$worksheetId/videos';
+  static String worksheetVideoStream(String videoId) => '/worksheets/videos/$videoId/stream';
+}
+
+/// BunnyCDN Stream constants — the Stream library's pull zone only allows requests
+/// from the official embed (Referer allow-list), so direct playback/thumbnail/download
+/// requests must carry this header.
+class BunnyConstants {
+  BunnyConstants._();
+
+  static const Map<String, String> cdnHeaders = {
+    'Referer': 'https://iframe.mediadelivery.net/',
+  };
 }
