@@ -14,6 +14,7 @@ abstract class ErrorHandler {
       return ServerFailure(
         error.exceptionMessage ?? S.current.serverErrorOccurredPleaseTryAgain,
         error.exceptionCode,
+        error.requestId,
       );
     } else if (error is CacheException) {
       return CacheFailure(
@@ -45,6 +46,7 @@ abstract class ErrorHandler {
       if (error.response != null && error.response!.data != null) {
         final dynamic raw = error.response!.data;
         final String? code = _extractCode(raw);
+        final String? requestId = _extractRequestId(raw);
         // NOTE(migration): raw-JSON backend (see endpoints.dart) sends
         // {code, message} error bodies rather than the {success, message,
         // data} envelope — detect specific backend codes before falling back
@@ -60,7 +62,7 @@ abstract class ErrorHandler {
             return NotSubscribedException();
         }
         final BaseModel baseModel = BaseModel.fromJson(raw is Map<String, dynamic> ? raw : <String, dynamic>{});
-        return ServerException(baseModel.message ?? _extractMessage(raw), error.response!.statusCode);
+        return ServerException(baseModel.message ?? _extractMessage(raw), error.response!.statusCode, requestId);
       } else if (error.type == DioExceptionType.connectionError ||
           error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout ||
@@ -86,6 +88,16 @@ abstract class ErrorHandler {
     if (data is Map) {
       final dynamic code = data['code'] ?? data['errorCode'];
       if (code != null) return code.toString();
+    }
+    return null;
+  }
+
+  /// The unified `{code, message, details, requestId}` body's correlation
+  /// id — see the backend's `routeErrorHandler.js`.
+  static String? _extractRequestId(dynamic data) {
+    if (data is Map) {
+      final dynamic id = data['requestId'];
+      if (id is String && id.isNotEmpty) return id;
     }
     return null;
   }

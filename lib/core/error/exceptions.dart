@@ -4,15 +4,23 @@ abstract class GenericExceptions implements Exception {
   final String? exceptionMessage;
   final int? exceptionCode;
 
-  const GenericExceptions(this.exceptionMessage, this.exceptionCode);
+  /// The backend's per-request correlation id (`routeErrorHandler`'s
+  /// `req.id`), when the error body carried one. Only [ServerException]
+  /// actually has a response body to read it from — see
+  /// `ErrorHandler.handleExceptionError`. Threaded through to [toString] so
+  /// it lands in the existing `Logger.error` call at the repository
+  /// boundary (`BaseRepositoryImpl.execute`) without any extra plumbing.
+  final String? requestId;
+
+  const GenericExceptions(this.exceptionMessage, this.exceptionCode, [this.requestId]);
 }
 
 class ServerException extends GenericExceptions {
-  ServerException(super.exceptionMessage, super.exceptionCode);
+  ServerException(super.exceptionMessage, super.exceptionCode, [super.requestId]);
 
   @override
   String toString() {
-    return 'ServerException{exceptionMessage: $exceptionMessage, exceptionCode: $exceptionCode}';
+    return 'ServerException{exceptionMessage: $exceptionMessage, exceptionCode: $exceptionCode, requestId: $requestId}';
   }
 }
 

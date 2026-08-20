@@ -4,18 +4,26 @@ abstract class Failure extends Equatable {
   final int? statusCode;
   final String statusMessage;
 
-  const Failure(this.statusMessage, this.statusCode);
+  /// The backend's per-request correlation id, forwarded from the
+  /// [GenericExceptions] that produced this failure — see `ErrorHandler`.
+  /// Kept out of [props] so existing equality-based assertions
+  /// (`ServerFailure('x', 500) == ServerFailure('x', 500)`) don't start
+  /// failing just because one side happens to carry a requestId and the
+  /// other doesn't.
+  final String? requestId;
+
+  const Failure(this.statusMessage, this.statusCode, [this.requestId]);
 
   @override
   List<Object?> get props => [statusCode, statusMessage];
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure(super.statusMessage, super.statusCode);
+  const ServerFailure(super.statusMessage, super.statusCode, [super.requestId]);
 
   @override
   String toString() {
-    return 'ServerFailure{statusMessage: $statusMessage, statusCode: $statusCode}';
+    return 'ServerFailure{statusMessage: $statusMessage, statusCode: $statusCode, requestId: $requestId}';
   }
 }
 

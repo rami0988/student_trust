@@ -1,5 +1,7 @@
 plugins {
     id("com.android.application")
+    // Kept until Built-in Kotlin is viable — see the android.builtInKotlin note
+    // in android/gradle.properties for why it can't be dropped yet.
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")

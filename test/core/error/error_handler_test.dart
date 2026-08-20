@@ -65,6 +65,27 @@ void main() {
         isA<GeneralException>(),
       );
     });
+
+    test('a unified {code, message, details, requestId} body carries requestId through', () {
+      final error = DioException(
+        requestOptions: requestOptions,
+        response: Response<Map<String, dynamic>>(
+          requestOptions: requestOptions,
+          statusCode: 500,
+          data: const {
+            'code': 'INTERNAL_ERROR',
+            'message': 'Unexpected server error',
+            'details': [],
+            'requestId': 'req-abc123',
+          },
+        ),
+      );
+
+      final result = ErrorHandler.handleExceptionError(error);
+
+      expect(result, isA<ServerException>());
+      expect(result.requestId, 'req-abc123');
+    });
   });
 
   group('handleFailureError', () {
@@ -99,6 +120,16 @@ void main() {
         ErrorHandler.handleFailureError(StateError('boom')),
         isA<GeneralFailure>(),
       );
+    });
+
+    test('forwards requestId from the ServerException that produced it', () {
+      final failure = ErrorHandler.handleFailureError(ServerException('down', 500, 'req-xyz'));
+
+      expect(failure, isA<ServerFailure>());
+      expect(failure.requestId, 'req-xyz');
+      // requestId is deliberately excluded from Equatable's props, so two
+      // otherwise-identical failures still compare equal regardless of it.
+      expect(failure, const ServerFailure('down', 500));
     });
   });
 }

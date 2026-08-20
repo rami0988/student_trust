@@ -13,6 +13,12 @@ class _$SubjectsState extends SubjectsState {
   final Failure? failure;
   @override
   final List<Subject> subjects;
+  @override
+  final PaginationModel? pagination;
+  @override
+  final bool isLoadingMore;
+  @override
+  final bool isSearching;
 
   factory _$SubjectsState([void Function(SubjectsStateBuilder)? updates]) =>
       (SubjectsStateBuilder()..update(updates))._build();
@@ -21,6 +27,9 @@ class _$SubjectsState extends SubjectsState {
     required this.status,
     this.failure,
     required this.subjects,
+    this.pagination,
+    required this.isLoadingMore,
+    required this.isSearching,
   }) : super._();
   @override
   SubjectsState rebuild(void Function(SubjectsStateBuilder) updates) =>
@@ -35,7 +44,10 @@ class _$SubjectsState extends SubjectsState {
     return other is SubjectsState &&
         status == other.status &&
         failure == other.failure &&
-        subjects == other.subjects;
+        subjects == other.subjects &&
+        pagination == other.pagination &&
+        isLoadingMore == other.isLoadingMore &&
+        isSearching == other.isSearching;
   }
 
   @override
@@ -44,6 +56,9 @@ class _$SubjectsState extends SubjectsState {
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, failure.hashCode);
     _$hash = $jc(_$hash, subjects.hashCode);
+    _$hash = $jc(_$hash, pagination.hashCode);
+    _$hash = $jc(_$hash, isLoadingMore.hashCode);
+    _$hash = $jc(_$hash, isSearching.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -53,7 +68,10 @@ class _$SubjectsState extends SubjectsState {
     return (newBuiltValueToStringHelper(r'SubjectsState')
           ..add('status', status)
           ..add('failure', failure)
-          ..add('subjects', subjects))
+          ..add('subjects', subjects)
+          ..add('pagination', pagination)
+          ..add('isLoadingMore', isLoadingMore)
+          ..add('isSearching', isSearching))
         .toString();
   }
 }
@@ -74,6 +92,20 @@ class SubjectsStateBuilder
   List<Subject>? get subjects => _$this._subjects;
   set subjects(List<Subject>? subjects) => _$this._subjects = subjects;
 
+  PaginationModel? _pagination;
+  PaginationModel? get pagination => _$this._pagination;
+  set pagination(PaginationModel? pagination) =>
+      _$this._pagination = pagination;
+
+  bool? _isLoadingMore;
+  bool? get isLoadingMore => _$this._isLoadingMore;
+  set isLoadingMore(bool? isLoadingMore) =>
+      _$this._isLoadingMore = isLoadingMore;
+
+  bool? _isSearching;
+  bool? get isSearching => _$this._isSearching;
+  set isSearching(bool? isSearching) => _$this._isSearching = isSearching;
+
   SubjectsStateBuilder();
 
   SubjectsStateBuilder get _$this {
@@ -82,6 +114,9 @@ class SubjectsStateBuilder
       _status = $v.status;
       _failure = $v.failure;
       _subjects = $v.subjects;
+      _pagination = $v.pagination;
+      _isLoadingMore = $v.isLoadingMore;
+      _isSearching = $v.isSearching;
       _$v = null;
     }
     return this;
@@ -114,6 +149,17 @@ class SubjectsStateBuilder
             subjects,
             r'SubjectsState',
             'subjects',
+          ),
+          pagination: pagination,
+          isLoadingMore: BuiltValueNullFieldError.checkNotNull(
+            isLoadingMore,
+            r'SubjectsState',
+            'isLoadingMore',
+          ),
+          isSearching: BuiltValueNullFieldError.checkNotNull(
+            isSearching,
+            r'SubjectsState',
+            'isSearching',
           ),
         );
     replace(_$result);

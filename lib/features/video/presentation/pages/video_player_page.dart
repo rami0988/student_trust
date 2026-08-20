@@ -39,7 +39,7 @@ class _VideoPlayerView extends StatefulWidget {
   State<_VideoPlayerView> createState() => _VideoPlayerViewState();
 }
 
-class _VideoPlayerViewState extends State<_VideoPlayerView> {
+class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingObserver {
   final SecurityService _securityService = getIt<SecurityService>();
   final DeviceService _deviceService = getIt<DeviceService>();
   // Page-level cross-feature repository read (not a bloc-to-bloc dependency)
@@ -67,6 +67,7 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Allow landscape for fullscreen video watching (overrides the global
     // portrait lock) and go fullscreen.
     SystemChrome.setPreferredOrientations([
@@ -225,8 +226,21 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
     }
   }
 
+  /// Stops audio when the app is backgrounded — leaving via the home button
+  /// or the app switcher never triggers [dispose], so without this the lesson
+  /// keeps playing out loud behind other apps. Also saves progress, since
+  /// the periodic timer stops running once we're not resumed.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      _betterPlayerController?.pause();
+      _saveCurrentProgress();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // The app has no global orientation lock (see main.dart) — leave every
     // orientation available on exit instead of narrowing back to portrait,
     // so the rest of the app keeps rotating freely.
@@ -236,10 +250,15 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> {
     _saveCurrentProgress();
     _progressTimer?.cancel();
     _captureSub?.cancel();
-    // Explicit pause before dispose: belt-and-braces so audio never keeps
-    // playing for the brief moment before the controller actually tears down.
+    // Pause first so audio stops instantly rather than at the end of the exit
+    // animation. `forceDispose: true` is REQUIRED:
+    // BetterPlayerController.dispose() starts with
+    // `if (!autoDispose && !forceDispose) return;` — so with our
+    // `autoDispose: false` (set in [_setupController] to survive rotation) a
+    // plain dispose() is a silent no-op and the native player keeps playing
+    // audio forever after the page is gone.
     _betterPlayerController?.pause();
-    _betterPlayerController?.dispose();
+    _betterPlayerController?.dispose(forceDispose: true);
     // TODO(migration): wipe the decrypted temp file for offline playback once
     // EncryptedDownloadService is migrated (task #10) — mirrors OLD app's
     // VideoPlayerScreen.dispose clearTempFile call.

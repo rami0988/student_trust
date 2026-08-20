@@ -24,24 +24,26 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m1(count) => "${count} files";
 
-  static String m2(count) => "${count} solution videos";
+  static String m2(shown, total) => "Showing ${shown} of ${total}";
 
-  static String m3(count) =>
-      "${Intl.plural(count, one: '${count} day ago', other: '${count} days ago')}";
+  static String m3(count) => "${count} solution videos";
 
   static String m4(count) =>
-      "${Intl.plural(count, one: '${count} hour ago', other: '${count} hours ago')}";
+      "${Intl.plural(count, one: '${count} day ago', other: '${count} days ago')}";
 
   static String m5(count) =>
-      "${Intl.plural(count, one: '${count} min ago', other: '${count} mins ago')}";
+      "${Intl.plural(count, one: '${count} hour ago', other: '${count} hours ago')}";
 
   static String m6(count) =>
-      "${Intl.plural(count, one: '${count} month ago', other: '${count} months ago')}";
+      "${Intl.plural(count, one: '${count} min ago', other: '${count} mins ago')}";
 
   static String m7(count) =>
+      "${Intl.plural(count, one: '${count} month ago', other: '${count} months ago')}";
+
+  static String m8(count) =>
       "${Intl.plural(count, one: '${count} year ago', other: '${count} years ago')}";
 
-  static String m8(count) => "Worksheets (${count})";
+  static String m9(count) => "Worksheets (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -220,7 +222,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "settingsSupportSection": MessageLookupByLibrary.simpleMessage("Support"),
     "showLess": MessageLookupByLibrary.simpleMessage("Show Less"),
     "showMore": MessageLookupByLibrary.simpleMessage("Show More"),
-    "solutionVideosCount": m2,
+    "showingOfTotal": m2,
+    "solutionVideosCount": m3,
     "solutionsSectionTitle": MessageLookupByLibrary.simpleMessage(
       "Explanation & Solution",
     ),
@@ -248,12 +251,12 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage(
           "There is problem with your connection, please try again",
         ),
-    "timeAgoDays": m3,
-    "timeAgoHours": m4,
-    "timeAgoMinutes": m5,
-    "timeAgoMonths": m6,
+    "timeAgoDays": m4,
+    "timeAgoHours": m5,
+    "timeAgoMinutes": m6,
+    "timeAgoMonths": m7,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("just now"),
-    "timeAgoYears": m7,
+    "timeAgoYears": m8,
     "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("Unsafe device"),
     "username": MessageLookupByLibrary.simpleMessage("Username"),
     "usernameRequired": MessageLookupByLibrary.simpleMessage(
@@ -266,7 +269,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "Video is processing\nTry again shortly",
     ),
-    "worksheetsWithCount": m8,
+    "worksheetsWithCount": m9,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "Your password must contain at least 8 characters including letters and numbers",

@@ -24,24 +24,26 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m1(count) => "${count} ملف";
 
-  static String m2(count) => "${count} فيديو حل";
+  static String m2(shown, total) => "عرض ${shown} من ${total}";
 
-  static String m3(count) =>
-      "${Intl.plural(count, one: 'منذ يوم', two: 'منذ يومين', few: 'منذ ${count} أيام', many: 'منذ ${count} يوم', other: 'منذ ${count} يوم')}";
+  static String m3(count) => "${count} فيديو حل";
 
   static String m4(count) =>
-      "${Intl.plural(count, one: 'منذ ساعة', two: 'منذ ساعتين', few: 'منذ ${count} ساعات', many: 'منذ ${count} ساعة', other: 'منذ ${count} ساعة')}";
+      "${Intl.plural(count, one: 'منذ يوم', two: 'منذ يومين', few: 'منذ ${count} أيام', many: 'منذ ${count} يوم', other: 'منذ ${count} يوم')}";
 
   static String m5(count) =>
-      "${Intl.plural(count, one: 'منذ دقيقة', two: 'منذ دقيقتين', few: 'منذ ${count} دقائق', many: 'منذ ${count} دقيقة', other: 'منذ ${count} دقيقة')}";
+      "${Intl.plural(count, one: 'منذ ساعة', two: 'منذ ساعتين', few: 'منذ ${count} ساعات', many: 'منذ ${count} ساعة', other: 'منذ ${count} ساعة')}";
 
   static String m6(count) =>
-      "${Intl.plural(count, one: 'منذ شهر', two: 'منذ شهرين', few: 'منذ ${count} أشهر', many: 'منذ ${count} شهر', other: 'منذ ${count} شهر')}";
+      "${Intl.plural(count, one: 'منذ دقيقة', two: 'منذ دقيقتين', few: 'منذ ${count} دقائق', many: 'منذ ${count} دقيقة', other: 'منذ ${count} دقيقة')}";
 
   static String m7(count) =>
+      "${Intl.plural(count, one: 'منذ شهر', two: 'منذ شهرين', few: 'منذ ${count} أشهر', many: 'منذ ${count} شهر', other: 'منذ ${count} شهر')}";
+
+  static String m8(count) =>
       "${Intl.plural(count, one: 'منذ سنة', two: 'منذ سنتين', few: 'منذ ${count} سنوات', many: 'منذ ${count} سنة', other: 'منذ ${count} سنة')}";
 
-  static String m8(count) => "أوراق العمل (${count})";
+  static String m9(count) => "أوراق العمل (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -218,7 +220,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "settingsSupportSection": MessageLookupByLibrary.simpleMessage("الدعم"),
     "showLess": MessageLookupByLibrary.simpleMessage("عرض أقل"),
     "showMore": MessageLookupByLibrary.simpleMessage("عرض المزيد"),
-    "solutionVideosCount": m2,
+    "showingOfTotal": m2,
+    "solutionVideosCount": m3,
     "solutionsSectionTitle": MessageLookupByLibrary.simpleMessage("شرح وحل"),
     "somethingWentWrong": MessageLookupByLibrary.simpleMessage(
       "عفواً! حدث خطأ ما",
@@ -244,12 +247,12 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage(
           "هناك مشكلة بالاتصال بالشبكة الرجاء إعادة المحاولة لاحقاً",
         ),
-    "timeAgoDays": m3,
-    "timeAgoHours": m4,
-    "timeAgoMinutes": m5,
-    "timeAgoMonths": m6,
+    "timeAgoDays": m4,
+    "timeAgoHours": m5,
+    "timeAgoMinutes": m6,
+    "timeAgoMonths": m7,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("الآن"),
-    "timeAgoYears": m7,
+    "timeAgoYears": m8,
     "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("جهاز غير آمن"),
     "username": MessageLookupByLibrary.simpleMessage("اسم المستخدم"),
     "usernameRequired": MessageLookupByLibrary.simpleMessage(
@@ -262,7 +265,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "الفيديو قيد المعالجة\nحاول مرة أخرى بعد قليل",
     ),
-    "worksheetsWithCount": m8,
+    "worksheetsWithCount": m9,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل تشمل حروفاً وأرقاماً",

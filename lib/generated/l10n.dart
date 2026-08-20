@@ -164,6 +164,16 @@ class S {
     );
   }
 
+  /// `Showing {shown} of {total}`
+  String showingOfTotal(int shown, int total) {
+    return Intl.message(
+      'Showing $shown of $total',
+      name: 'showingOfTotal',
+      desc: '',
+      args: [shown, total],
+    );
+  }
+
   /// `Settings`
   String get settings {
     return Intl.message('Settings', name: 'settings', desc: '', args: []);

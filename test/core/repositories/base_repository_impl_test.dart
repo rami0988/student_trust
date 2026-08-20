@@ -2,9 +2,19 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_template/core/error/exceptions.dart';
 import 'package:mobile_template/core/error/failures.dart';
+import 'package:mobile_template/core/models/pagination_model.dart';
+import 'package:mobile_template/core/models/paginated_result.dart';
 import 'package:mobile_template/core/repositories/base_repository_impl.dart';
 import 'package:mobile_template/core/utils/request_result.dart';
 import 'package:mobile_template/generated/l10n.dart';
+
+PaginationModel _pagination({
+  required int page,
+  required bool hasNextPage,
+  int limit = 100,
+  int total = 0,
+  int totalPages = 1,
+}) => PaginationModel(page: page, limit: limit, total: total, totalPages: totalPages, hasNextPage: hasNextPage, hasPrevPage: page > 1);
 
 /// `execute` is the only place an exception becomes a failure — the boundary the
 /// whole architecture depends on. Nothing thrown below it may escape upward.
@@ -66,6 +76,48 @@ void main() {
       );
 
       expect(result.fold(success: (d) => d, failure: (_) => -1), 5);
+    });
+  });
+
+  group('executeAllPages', () {
+    test('loops every page (hasNextPage) and concatenates the converted items', () async {
+      int calls = 0;
+      final result = await repository.executeAllPages<String, int>(
+        (page) async {
+          calls++;
+          if (page == 1) return PaginatedResult([1, 2], _pagination(page: 1, hasNextPage: true, total: 3));
+          return PaginatedResult([3], _pagination(page: 2, hasNextPage: false, total: 3));
+        },
+        converter: (n) => 'item$n',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.fold(success: (d) => d, failure: (_) => const <String>[]), ['item1', 'item2', 'item3']);
+      expect(calls, 2);
+    });
+
+    test('stops after a single page when hasNextPage is false', () async {
+      int calls = 0;
+      final result = await repository.executeAllPages<int, int>(
+        (page) async {
+          calls++;
+          return PaginatedResult(const [], _pagination(page: 1, hasNextPage: false));
+        },
+        converter: (n) => n,
+      );
+
+      expect(result.fold(success: (d) => d, failure: (_) => const <int>[]), isEmpty);
+      expect(calls, 1);
+    });
+
+    test('a failure mid-loop becomes a FailureResult', () async {
+      final result = await repository.executeAllPages<int, int>(
+        (page) => throw ServerException('server down', 500),
+        converter: (n) => n,
+      );
+
+      expect(result.isFailure, isTrue);
+      expect((result as FailureResult<List<int>>).failure, isA<ServerFailure>());
     });
   });
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/di.dart';
+import '../../../../core/models/pagination_model.dart';
 import '../../../../core/routing/routes.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/breakpoints.dart';
 import '../../../../core/utils/utils.dart';
@@ -114,32 +116,71 @@ class _LessonsPageState extends State<LessonsPage> {
                 if (state.status.isEmpty) {
                   return EmptyStateWidget(icon: Icons.play_circle_outline_rounded, title: S.of(context).noLessons);
                 }
-                return CustomRefreshIndicator(
-                  onRefresh: () => context.read<LessonsCubit>().getLessons(widget.args.chapterId),
-                  child: ResponsiveList(
-                    breakpoints: bp,
-                    gridItemHeight: 130,
-                    padding: EdgeInsets.fromLTRB(bp.horizontalPadding, AppTokens.s16, bp.horizontalPadding, AppTokens.s16),
-                    itemCount: state.lessons.length,
-                    itemBuilder: (context, index) {
-                      final lesson = state.lessons[index];
-                      final bool isDownloaded = state.downloadedLessonIds.contains(lesson.id);
-                      return FadeSlideIn.staggered(
-                        index: index,
-                        child: LessonTile(
-                          lesson: lesson,
-                          isDownloaded: isDownloaded,
-                          onPlayOnline: () => _play(lesson, offline: false),
-                          onPlayOffline: () => _play(lesson, offline: true),
+                final pagination = state.pagination;
+                return Column(
+                  children: [
+                    Expanded(
+                      child: CustomRefreshIndicator(
+                        onRefresh: () => context.read<LessonsCubit>().getLessons(widget.args.chapterId),
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            final metrics = notification.metrics;
+                            if (metrics.pixels >= metrics.maxScrollExtent - 200) {
+                              context.read<LessonsCubit>().loadMoreLessons(widget.args.chapterId);
+                            }
+                            return false;
+                          },
+                          child: ResponsiveList(
+                            breakpoints: bp,
+                            gridItemHeight: 130,
+                            padding: EdgeInsets.fromLTRB(bp.horizontalPadding, AppTokens.s16, bp.horizontalPadding, AppTokens.s16),
+                            itemCount: state.lessons.length,
+                            itemBuilder: (context, index) {
+                              final lesson = state.lessons[index];
+                              final bool isDownloaded = state.downloadedLessonIds.contains(lesson.id);
+                              return FadeSlideIn.staggered(
+                                index: index,
+                                child: LessonTile(
+                                  lesson: lesson,
+                                  isDownloaded: isDownloaded,
+                                  onPlayOnline: () => _play(lesson, offline: false),
+                                  onPlayOffline: () => _play(lesson, offline: true),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                    if (pagination != null) _LessonsPaginationFooter(pagination: pagination, isLoadingMore: state.isLoadingMore),
+                  ],
                 );
               },
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _LessonsPaginationFooter extends StatelessWidget {
+  final PaginationModel pagination;
+  final bool isLoadingMore;
+
+  const _LessonsPaginationFooter({required this.pagination, required this.isLoadingMore});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: isLoadingMore
+            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
+            : Text(
+                S.of(context).showingOfTotal(pagination.rangeEnd, pagination.total),
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+              ),
       ),
     );
   }

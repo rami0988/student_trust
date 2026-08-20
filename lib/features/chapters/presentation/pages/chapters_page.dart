@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/models/pagination_model.dart';
 import '../../../../core/routing/routes.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/breakpoints.dart';
 import '../../../../core/widgets/app_motion.dart';
@@ -43,32 +45,73 @@ class ChaptersPage extends StatelessWidget {
               if (state.status.isEmpty) {
                 return EmptyStateWidget(icon: Icons.menu_book_outlined, title: S.of(context).noChapters);
               }
-              return CustomRefreshIndicator(
-                onRefresh: () => context.read<ChaptersCubit>().getChapters(args.subjectId),
-                child: ResponsiveList(
-                  breakpoints: bp,
-                  gridItemHeight: 150,
-                  padding: EdgeInsets.fromLTRB(bp.horizontalPadding, AppTokens.s16, bp.horizontalPadding, AppTokens.s16),
-                  itemCount: state.chapters.length,
-                  itemBuilder: (context, index) {
-                    final chapter = state.chapters[index];
-                    return FadeSlideIn.staggered(
-                      index: index,
-                      child: ChapterCard(
-                        chapter: chapter,
-                        number: index + 1,
-                        onTap: () =>
-                            Navigator.of(context).pushNamed(Routes.lessons, arguments: LessonsArgs(chapterId: chapter.id, chapterTitle: chapter.title)),
-                        onWorksheetsTap: () =>
-                            Navigator.of(context).pushNamed(Routes.worksheets, arguments: WorksheetsArgs(chapterId: chapter.id, chapterTitle: chapter.title)),
+              final pagination = state.pagination;
+              return Column(
+                children: [
+                  Expanded(
+                    child: CustomRefreshIndicator(
+                      onRefresh: () => context.read<ChaptersCubit>().getChapters(args.subjectId),
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          final metrics = notification.metrics;
+                          if (metrics.pixels >= metrics.maxScrollExtent - 200) {
+                            context.read<ChaptersCubit>().loadMoreChapters(args.subjectId);
+                          }
+                          return false;
+                        },
+                        child: ResponsiveList(
+                          breakpoints: bp,
+                          gridItemHeight: 150,
+                          padding: EdgeInsets.fromLTRB(bp.horizontalPadding, AppTokens.s16, bp.horizontalPadding, AppTokens.s16),
+                          itemCount: state.chapters.length,
+                          itemBuilder: (context, index) {
+                            final chapter = state.chapters[index];
+                            return FadeSlideIn.staggered(
+                              index: index,
+                              child: ChapterCard(
+                                chapter: chapter,
+                                number: index + 1,
+                                onTap: () => Navigator.of(
+                                  context,
+                                ).pushNamed(Routes.lessons, arguments: LessonsArgs(chapterId: chapter.id, chapterTitle: chapter.title)),
+                                onWorksheetsTap: () => Navigator.of(
+                                  context,
+                                ).pushNamed(Routes.worksheets, arguments: WorksheetsArgs(chapterId: chapter.id, chapterTitle: chapter.title)),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                  if (pagination != null) _ChaptersPaginationFooter(pagination: pagination, isLoadingMore: state.isLoadingMore),
+                ],
               );
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _ChaptersPaginationFooter extends StatelessWidget {
+  final PaginationModel pagination;
+  final bool isLoadingMore;
+
+  const _ChaptersPaginationFooter({required this.pagination, required this.isLoadingMore});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: isLoadingMore
+            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
+            : Text(
+                S.of(context).showingOfTotal(pagination.rangeEnd, pagination.total),
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+              ),
       ),
     );
   }

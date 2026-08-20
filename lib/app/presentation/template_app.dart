@@ -11,6 +11,7 @@ import 'cubit/app_cubit.dart';
 import 'cubit/app_state.dart';
 import 'pages/auth_gate.dart';
 import 'widgets/connectivity_watcher.dart';
+import 'widgets/session_watcher.dart';
 
 class TemplateApp extends StatelessWidget {
   final AppRouter appRouter;
@@ -28,15 +29,17 @@ class TemplateApp extends StatelessWidget {
           // Light-only app — no dark mode, so no themeMode/darkTheme wiring.
           theme: AppThemeData.light(state.language),
           builder: (context, child) {
-            // ConnectivityWatcher sits here, above the navigator, so it
-            // survives the `pushNamedAndRemoveUntil` calls that replace the
-            // whole route stack — see its doc comment.
+            // ConnectivityWatcher and SessionWatcher sit here, above the
+            // navigator, so they survive the `pushNamedAndRemoveUntil` calls
+            // that replace the whole route stack — see their doc comments.
             return ConnectivityWatcher(
-              child: MediaQuery(
-                data: MediaQuery.of(
-                  context,
-                ).copyWith(textScaler: const TextScaler.linear(1)),
-                child: child!,
+              child: SessionWatcher(
+                child: MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: const TextScaler.linear(1)),
+                  child: child!,
+                ),
               ),
             );
           },

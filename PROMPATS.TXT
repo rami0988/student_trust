@@ -177,3 +177,93 @@ Implement a complete, professional theming system following the template's archi
    - Every screen must look native in both light and dark.
 
 **Output:** Updated `ColorsManager`, `AppThemeData`, and refactored widgets to use theme exclusively.
+
+
+
+
+
+***************************************************************
+You are a senior Flutter engineer. Your task is to update the student app (student_trust) to fully support the new pagination and caching system implemented in the backend.
+
+The backend now returns paginated responses for student content endpoints in this format:
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 127,
+    "totalPages": 3,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  }
+}
+
+Affected endpoints:
+- GET /api/student/subjects
+- GET /api/student/subjects/:subjectId/chapters
+- GET /api/student/subjects/:subjectId/chapters/:chapterId/lessons
+
+Current state:
+- The data sources in `lib/data/datasources/` currently only request page 1
+- The UI screens display all items from page 1, but if a list exceeds 50 items, the rest are silently truncated
+- Error handling reads from the new unified format `{code, message, details, requestId}`
+
+Requirements:
+
+1. Update Data Models
+   - Create/update pagination response models to match the backend contract
+   - Ensure `@JsonSerializable` models correctly parse the `{data: [...], pagination: {...}}` envelope
+   - Maintain backward compatibility where possible, but clearly flag any breaking changes
+
+2. Update Data Sources
+   - Modify the relevant data sources to accept pagination parameters (page, limit)
+   - Implement methods to fetch next/previous pages
+   - Handle empty results gracefully
+
+3. Update UI with Infinite Scroll or Load More
+   - For each affected screen (subjects list, chapters list, lessons list):
+     - Add infinite scroll (pull to load more) OR a "Load More" button at the bottom
+     - Show a loading indicator when fetching the next page
+     - Display total count somewhere (e.g., "Showing 50 of 127 lessons")
+     - Handle the case where `hasNextPage` is false (no more items to load)
+   - Maintain the existing UI/UX design tokens from `app_tokens.dart`
+
+4. Error Handling
+   - Ensure all API calls properly handle the new unified error format
+   - Display user-friendly error messages
+   - Log errors with requestId for debugging
+
+5. State Management
+   - Update the relevant Cubits/Blocs/Riverpod providers to manage pagination state
+   - Handle loading states for each page separately
+   - Prevent duplicate requests (don't fetch page 2 if already loading)
+
+6. Testing
+   - Update existing widget tests to cover pagination scenarios
+   - Add tests for:
+     - Successful pagination (load page 1, then page 2)
+     - Empty results
+     - Error scenarios
+     - End of list (no more pages)
+   - Ensure all tests pass with `flutter test`
+
+7. Verification
+   - Run `flutter analyze` and fix any warnings/errors
+   - Run `build_runner` if code generation is needed
+   - Test manually against the local backend with seeded data (500+ students/lessons)
+
+Deliverables:
+1. Updated data models
+2. Updated data sources with pagination support
+3. Updated UI screens with infinite scroll/load more
+4. Updated state management
+5. Updated tests
+6. A summary of changes and any breaking changes to the contract
+7. Manual testing instructions
+
+Important:
+- Read the project's CLAUDE.md first before starting
+- Maintain the existing architecture and patterns
+- Do not change the backend contract - work with what the backend returns
+- Flag any issues or ambiguities before implementing
+- Prioritize correctness and user experience over speed

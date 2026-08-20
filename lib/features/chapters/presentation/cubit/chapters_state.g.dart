@@ -13,6 +13,10 @@ class _$ChaptersState extends ChaptersState {
   final Failure? failure;
   @override
   final List<Chapter> chapters;
+  @override
+  final PaginationModel? pagination;
+  @override
+  final bool isLoadingMore;
 
   factory _$ChaptersState([void Function(ChaptersStateBuilder)? updates]) =>
       (ChaptersStateBuilder()..update(updates))._build();
@@ -21,6 +25,8 @@ class _$ChaptersState extends ChaptersState {
     required this.status,
     this.failure,
     required this.chapters,
+    this.pagination,
+    required this.isLoadingMore,
   }) : super._();
   @override
   ChaptersState rebuild(void Function(ChaptersStateBuilder) updates) =>
@@ -35,7 +41,9 @@ class _$ChaptersState extends ChaptersState {
     return other is ChaptersState &&
         status == other.status &&
         failure == other.failure &&
-        chapters == other.chapters;
+        chapters == other.chapters &&
+        pagination == other.pagination &&
+        isLoadingMore == other.isLoadingMore;
   }
 
   @override
@@ -44,6 +52,8 @@ class _$ChaptersState extends ChaptersState {
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, failure.hashCode);
     _$hash = $jc(_$hash, chapters.hashCode);
+    _$hash = $jc(_$hash, pagination.hashCode);
+    _$hash = $jc(_$hash, isLoadingMore.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -53,7 +63,9 @@ class _$ChaptersState extends ChaptersState {
     return (newBuiltValueToStringHelper(r'ChaptersState')
           ..add('status', status)
           ..add('failure', failure)
-          ..add('chapters', chapters))
+          ..add('chapters', chapters)
+          ..add('pagination', pagination)
+          ..add('isLoadingMore', isLoadingMore))
         .toString();
   }
 }
@@ -74,6 +86,16 @@ class ChaptersStateBuilder
   List<Chapter>? get chapters => _$this._chapters;
   set chapters(List<Chapter>? chapters) => _$this._chapters = chapters;
 
+  PaginationModel? _pagination;
+  PaginationModel? get pagination => _$this._pagination;
+  set pagination(PaginationModel? pagination) =>
+      _$this._pagination = pagination;
+
+  bool? _isLoadingMore;
+  bool? get isLoadingMore => _$this._isLoadingMore;
+  set isLoadingMore(bool? isLoadingMore) =>
+      _$this._isLoadingMore = isLoadingMore;
+
   ChaptersStateBuilder();
 
   ChaptersStateBuilder get _$this {
@@ -82,6 +104,8 @@ class ChaptersStateBuilder
       _status = $v.status;
       _failure = $v.failure;
       _chapters = $v.chapters;
+      _pagination = $v.pagination;
+      _isLoadingMore = $v.isLoadingMore;
       _$v = null;
     }
     return this;
@@ -114,6 +138,12 @@ class ChaptersStateBuilder
             chapters,
             r'ChaptersState',
             'chapters',
+          ),
+          pagination: pagination,
+          isLoadingMore: BuiltValueNullFieldError.checkNotNull(
+            isLoadingMore,
+            r'ChaptersState',
+            'isLoadingMore',
           ),
         );
     replace(_$result);

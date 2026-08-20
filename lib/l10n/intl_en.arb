@@ -14,6 +14,13 @@
   "noSubjects": "No subjects available",
   "searchSubjectHint": "Search a subject...",
   "noSearchResults": "No subjects match your search",
+  "showingOfTotal": "Showing {shown} of {total}",
+  "@showingOfTotal": {
+    "placeholders": {
+      "shown": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "settings": "Settings",
   "chapters": "Chapters",
   "lessons": "Lessons",

@@ -15,6 +15,10 @@ class _$LessonsState extends LessonsState {
   final List<Lesson> lessons;
   @override
   final List<String> downloadedLessonIds;
+  @override
+  final PaginationModel? pagination;
+  @override
+  final bool isLoadingMore;
 
   factory _$LessonsState([void Function(LessonsStateBuilder)? updates]) =>
       (LessonsStateBuilder()..update(updates))._build();
@@ -24,6 +28,8 @@ class _$LessonsState extends LessonsState {
     this.failure,
     required this.lessons,
     required this.downloadedLessonIds,
+    this.pagination,
+    required this.isLoadingMore,
   }) : super._();
   @override
   LessonsState rebuild(void Function(LessonsStateBuilder) updates) =>
@@ -39,7 +45,9 @@ class _$LessonsState extends LessonsState {
         status == other.status &&
         failure == other.failure &&
         lessons == other.lessons &&
-        downloadedLessonIds == other.downloadedLessonIds;
+        downloadedLessonIds == other.downloadedLessonIds &&
+        pagination == other.pagination &&
+        isLoadingMore == other.isLoadingMore;
   }
 
   @override
@@ -49,6 +57,8 @@ class _$LessonsState extends LessonsState {
     _$hash = $jc(_$hash, failure.hashCode);
     _$hash = $jc(_$hash, lessons.hashCode);
     _$hash = $jc(_$hash, downloadedLessonIds.hashCode);
+    _$hash = $jc(_$hash, pagination.hashCode);
+    _$hash = $jc(_$hash, isLoadingMore.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -59,7 +69,9 @@ class _$LessonsState extends LessonsState {
           ..add('status', status)
           ..add('failure', failure)
           ..add('lessons', lessons)
-          ..add('downloadedLessonIds', downloadedLessonIds))
+          ..add('downloadedLessonIds', downloadedLessonIds)
+          ..add('pagination', pagination)
+          ..add('isLoadingMore', isLoadingMore))
         .toString();
   }
 }
@@ -85,6 +97,16 @@ class LessonsStateBuilder
   set downloadedLessonIds(List<String>? downloadedLessonIds) =>
       _$this._downloadedLessonIds = downloadedLessonIds;
 
+  PaginationModel? _pagination;
+  PaginationModel? get pagination => _$this._pagination;
+  set pagination(PaginationModel? pagination) =>
+      _$this._pagination = pagination;
+
+  bool? _isLoadingMore;
+  bool? get isLoadingMore => _$this._isLoadingMore;
+  set isLoadingMore(bool? isLoadingMore) =>
+      _$this._isLoadingMore = isLoadingMore;
+
   LessonsStateBuilder();
 
   LessonsStateBuilder get _$this {
@@ -94,6 +116,8 @@ class LessonsStateBuilder
       _failure = $v.failure;
       _lessons = $v.lessons;
       _downloadedLessonIds = $v.downloadedLessonIds;
+      _pagination = $v.pagination;
+      _isLoadingMore = $v.isLoadingMore;
       _$v = null;
     }
     return this;
@@ -131,6 +155,12 @@ class LessonsStateBuilder
             downloadedLessonIds,
             r'LessonsState',
             'downloadedLessonIds',
+          ),
+          pagination: pagination,
+          isLoadingMore: BuiltValueNullFieldError.checkNotNull(
+            isLoadingMore,
+            r'LessonsState',
+            'isLoadingMore',
           ),
         );
     replace(_$result);

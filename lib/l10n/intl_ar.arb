@@ -14,6 +14,7 @@
   "noSubjects": "لا توجد مواد متاحة",
   "searchSubjectHint": "ابحث عن مادة...",
   "noSearchResults": "لا توجد مواد مطابقة للبحث",
+  "showingOfTotal": "عرض {shown} من {total}",
   "settings": "الإعدادات",
   "chapters": "الفصول",
   "lessons": "الدروس",
