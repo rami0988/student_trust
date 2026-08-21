@@ -8,9 +8,10 @@ import '../../../core/event_bus/session_expired_event.dart';
 import '../../../core/routing/routes.dart';
 import '../../../features/auth/presentation/cubit/auth_cubit.dart';
 
-/// Watches for [SessionExpiredEvent] (fired by `SessionInterceptor` on a 401)
-/// for the whole app lifetime and drops the student back to the login
-/// screen, no matter which screen they were on.
+/// Watches for [SessionExpiredEvent] (fired by `TokenRefreshInterceptor` when
+/// a 401 could not be recovered by a token refresh) for the whole app lifetime
+/// and drops the student back to the login screen, no matter which screen they
+/// were on.
 ///
 /// Mounted in `MaterialApp.builder` — i.e. *above* the navigator — for the
 /// same reason as [ConnectivityWatcher]: [AuthGate] tears down the route it

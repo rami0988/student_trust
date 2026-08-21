@@ -49,9 +49,11 @@ direction is `presentation → domain ← data`; presentation never imports `dat
 Shared code lives in `lib/core/`; the app shell (`MaterialApp`, `AppCubit` for
 language/flavor, `ConnectivityWatcher`) lives in `lib/app/`.
 
-**Every feature here uses Cubit, not Bloc** — there is no pagination in this app. The
-template's bloc/pagination machinery (`PaginationStateData`, `bloc_concurrency`) is present
-in `core/` but unused.
+**Every feature here uses Cubit, not Bloc.** The catalog endpoints (subjects, chapters,
+lessons) *are* paginated — see `core/models/pagination_model.dart` + `paginated_result.dart`
+and the `loadMore*` methods on their cubits — but that pagination is hand-rolled in the
+cubits rather than built on the template's bloc machinery (`PaginationStateData`,
+`bloc_concurrency`), which is still present in `core/` but unused.
 
 ### Data flow
 
@@ -78,9 +80,17 @@ JSON** at `<server>/api` (no `{success, message, data, meta}`, no `/v1`). Conseq
   or the auth one — those are the real reference implementations for new data sources.
 
 `DioFactory` builds a singleton Dio with `AuthInterceptor` (offline pre-check → rejects as
-`connectionError`, `Accept-Language`, Bearer token from secure storage) and
-`LoggingInterceptor`. **Known gap:** there is no 401-refresh interceptor, so an expired
-token hard-logs-out instead of silently refreshing (documented in `dio_factory.dart`).
+`connectionError`, `Accept-Language`, Bearer token from secure storage),
+`TokenRefreshInterceptor`, and `LoggingInterceptor`.
+
+`TokenRefreshInterceptor` silently renews the 15-minute access token off the 7-day refresh
+token and replays the failed request. Because the backend **rotates** refresh tokens
+(single-use `jti`), it enforces **single-flight**: one shared `Completer` means concurrent
+401s — which the video player produces routinely via overlapping range requests — trigger
+exactly one `/auth/refresh`. It persists the rotated refresh token, and fires
+`SessionExpiredEvent` (→ `SessionWatcher` → auth gate) **only** when the refresh genuinely
+fails. The former `SessionInterceptor`, which hard-logged-out on *every* 401, has been
+removed.
 
 Video/thumbnail requests to BunnyCDN must carry `BunnyConstants.cdnHeaders`
 (`Referer: https://iframe.mediadelivery.net/`) — the pull zone enforces a Referer

@@ -3,16 +3,15 @@ import 'package:dio/dio.dart';
 import 'auth_interceptor.dart';
 import 'endpoints.dart';
 import 'logging_interceptor.dart';
-import 'session_interceptor.dart';
+import 'token_refresh_interceptor.dart';
 
-// NOTE(migration): OLD app's DioClient had an onError(401) interceptor that
-// silently refreshed the access token and retried the failed request. That
-// silent-refresh behavior is still NOT present here — sessions do not
-// transparently renew. What IS wired up (SessionInterceptor, below) is the
-// hard-logout half: a 401 fires SessionExpiredEvent so the app shell drops
-// the student back to the login screen instead of leaving them stuck on a
-// screen that will just keep failing. Flagging the missing refresh half as a
-// known gap rather than guessing at where it belongs.
+// The silent-refresh half of session handling is now wired up:
+// [TokenRefreshInterceptor] renews the 15-minute access token off the 7-day
+// refresh token and replays the failed request, so a student is no longer
+// logged out mid-lesson. It still fires SessionExpiredEvent — but only when
+// the refresh itself genuinely fails, which is what the old
+// SessionInterceptor did on *every* 401. That interceptor is now redundant
+// and has been removed from the chain.
 abstract class DioFactory {
   DioFactory._();
 
@@ -28,7 +27,7 @@ abstract class DioFactory {
       _dio!.options.receiveTimeout = timeout;
       _dio!.options.connectTimeout = timeout;
       _dio!.interceptors.add(AuthInterceptor());
-      _dio!.interceptors.add(SessionInterceptor());
+      _dio!.interceptors.add(TokenRefreshInterceptor());
       _dio!.interceptors.add(LoggingInterceptor());
       return _dio!;
     } else {
