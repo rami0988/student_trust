@@ -1,6 +1,6 @@
-plugins {
+﻿plugins {
     id("com.android.application")
-    // Kept until Built-in Kotlin is viable — see the android.builtInKotlin note
+    // Kept until Built-in Kotlin is viable â€” see the android.builtInKotlin note
     // in android/gradle.properties for why it can't be dropped yet.
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -13,7 +13,7 @@ dependencies {
 
 android {
     // NOTE(migration): matches OLD app exactly (namespace and applicationId
-    // intentionally differ there too — namespace only affects the generated
+    // intentionally differ there too â€” namespace only affects the generated
     // R/BuildConfig package, applicationId is the real Play Store identity).
     namespace = "com.edushield.edushield_student"
     compileSdk = flutter.compileSdkVersion
@@ -36,7 +36,9 @@ android {
     }
 
     buildTypes {
-        release {
+        release {
+            isMinifyEnabled = false
+            isShrinkResources = false
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
@@ -57,6 +59,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+
+
 
 
 
