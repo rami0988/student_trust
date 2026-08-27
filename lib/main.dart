@@ -26,7 +26,7 @@ void main() async {
   // the video player constrains orientation, and only while it's on screen
   // (see VideoPlayerPage's initState/dispose).
   Endpoints.setServerUrl('https://api.ra-trust.site');
-  // Endpoints.setServerUrl('https://magdalen-unhissed-adelaide.ngrok-free.dev');
+  //Endpoints.setServerUrl('https://magdalen-unhissed-adelaide.ngrok-free.dev');
   if (useFirebase) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }

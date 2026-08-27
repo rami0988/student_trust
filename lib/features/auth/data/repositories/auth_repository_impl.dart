@@ -56,6 +56,10 @@ class AuthRepositoryImpl extends BaseRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
+    // Best-effort — see AuthRemoteDataSourceImpl.logout(). Revokes this
+    // session's tokens server-side; the local wipe below always happens
+    // regardless of whether the network call succeeded.
+    await _authRemoteDataSource.logout();
     // Keep the device id so single-device binding survives a re-login.
     final String deviceId = await SharedPreferencesHelper.getSecuredString(LocalStorageKeys.deviceId);
     await SharedPreferencesHelper.clearAllSecuredData();

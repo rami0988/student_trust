@@ -19,6 +19,7 @@ abstract class Endpoints {
   /// *** Auth ***
   static const String login = '/auth/login';
   static const String refreshToken = '/auth/refresh';
+  static const String logout = '/auth/logout';
   static const String deleteAccount = '/auth/account';
 
   /// *** Subjects ***

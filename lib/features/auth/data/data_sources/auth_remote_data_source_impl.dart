@@ -37,6 +37,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
+  Future<void> logout() async {
+    // Best-effort: local session teardown (AuthRepositoryImpl.logout) must
+    // succeed even if this network call fails — mirrors FRONT's
+    // AuthRemoteDataSourceImpl.logout().
+    try {
+      await _dio.post<dynamic>(Endpoints.logout);
+    } catch (_) {
+      // Ignored — see above.
+    }
+  }
+
+  @override
   Future<void> deleteAccount() async {
     try {
       await _dio.delete(Endpoints.deleteAccount);
