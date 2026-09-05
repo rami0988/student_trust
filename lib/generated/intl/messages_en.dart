@@ -22,28 +22,30 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m0(count) => "${count} downloaded";
 
-  static String m1(count) => "${count} files";
+  static String m1(count) => "Deleted ${count} lessons";
 
-  static String m2(shown, total) => "Showing ${shown} of ${total}";
+  static String m2(count) => "${count} files";
 
-  static String m3(count) => "${count} solution videos";
+  static String m3(shown, total) => "Showing ${shown} of ${total}";
 
-  static String m4(count) =>
-      "${Intl.plural(count, one: '${count} day ago', other: '${count} days ago')}";
+  static String m4(count) => "${count} solution videos";
 
   static String m5(count) =>
-      "${Intl.plural(count, one: '${count} hour ago', other: '${count} hours ago')}";
+      "${Intl.plural(count, one: '${count} day ago', other: '${count} days ago')}";
 
   static String m6(count) =>
-      "${Intl.plural(count, one: '${count} min ago', other: '${count} mins ago')}";
+      "${Intl.plural(count, one: '${count} hour ago', other: '${count} hours ago')}";
 
   static String m7(count) =>
-      "${Intl.plural(count, one: '${count} month ago', other: '${count} months ago')}";
+      "${Intl.plural(count, one: '${count} min ago', other: '${count} mins ago')}";
 
   static String m8(count) =>
+      "${Intl.plural(count, one: '${count} month ago', other: '${count} months ago')}";
+
+  static String m9(count) =>
       "${Intl.plural(count, one: '${count} year ago', other: '${count} years ago')}";
 
-  static String m9(count) => "Worksheets (${count})";
+  static String m10(count) => "Worksheets (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -75,16 +77,33 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteAccountFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t delete the account, please try again",
     ),
+    "deleteAllDownloads": MessageLookupByLibrary.simpleMessage(
+      "Delete all downloads",
+    ),
+    "deleteAllDownloadsConfirm": MessageLookupByLibrary.simpleMessage(
+      "Every downloaded lesson will be removed from this device. You can download them again any time.",
+    ),
     "deleteDownload": MessageLookupByLibrary.simpleMessage("Delete download"),
     "deleteDownloadConfirm": MessageLookupByLibrary.simpleMessage(
       "Remove this lesson from your downloads?",
     ),
     "download": MessageLookupByLibrary.simpleMessage("Download"),
+    "downloadCorrupted": MessageLookupByLibrary.simpleMessage(
+      "This download is damaged - please download the lesson again",
+    ),
+    "downloadDeleted": MessageLookupByLibrary.simpleMessage(
+      "Lesson removed from downloads",
+    ),
+    "downloadFailed": MessageLookupByLibrary.simpleMessage("Download failed"),
+    "downloadIncomplete": MessageLookupByLibrary.simpleMessage(
+      "The download stopped before it finished - please try again",
+    ),
     "downloadToDeviceTooltip": MessageLookupByLibrary.simpleMessage(
       "Download to device",
     ),
     "downloaded": MessageLookupByLibrary.simpleMessage("Downloaded"),
     "downloadsCount": m0,
+    "downloadsDeleted": m1,
     "downloadsTitle": MessageLookupByLibrary.simpleMessage("Downloads"),
     "emailCopied": MessageLookupByLibrary.simpleMessage("Email copied"),
     "emailFormatNotCorrect": MessageLookupByLibrary.simpleMessage(
@@ -102,7 +121,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "fieldIsRequired": MessageLookupByLibrary.simpleMessage(
       "This field is required",
     ),
-    "filesCount": m1,
+    "filesCount": m2,
     "filesSectionTitle": MessageLookupByLibrary.simpleMessage("Files"),
     "fullNameCanOnlyContainLettersOrSpaces":
         MessageLookupByLibrary.simpleMessage(
@@ -122,6 +141,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "logoutConfirm": MessageLookupByLibrary.simpleMessage(
       "Are you sure you want to log out?",
     ),
+    "manageDownloads": MessageLookupByLibrary.simpleMessage("Manage downloads"),
+    "myDownloads": MessageLookupByLibrary.simpleMessage("My downloads"),
     "networkErrorSubtitle": MessageLookupByLibrary.simpleMessage(
       "It seems you\'re not connected to the internet. Please check your connection and try again.",
     ),
@@ -192,12 +213,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "pleaseEnterYourFullName": MessageLookupByLibrary.simpleMessage(
       "Please enter your full name",
     ),
+    "queuedDownload": MessageLookupByLibrary.simpleMessage("Waiting"),
     "recordingDetected": MessageLookupByLibrary.simpleMessage(
       "Screen recording detected\nStop the recording app to continue",
     ),
     "resumeDownload": MessageLookupByLibrary.simpleMessage("Resume"),
     "retry": MessageLookupByLibrary.simpleMessage("Try Again"),
     "retryConnection": MessageLookupByLibrary.simpleMessage("Retry connection"),
+    "retryDownload": MessageLookupByLibrary.simpleMessage("Try again"),
     "savedToDownloads": MessageLookupByLibrary.simpleMessage(
       "File saved to your Downloads folder",
     ),
@@ -222,8 +245,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "settingsSupportSection": MessageLookupByLibrary.simpleMessage("Support"),
     "showLess": MessageLookupByLibrary.simpleMessage("Show Less"),
     "showMore": MessageLookupByLibrary.simpleMessage("Show More"),
-    "showingOfTotal": m2,
-    "solutionVideosCount": m3,
+    "showingOfTotal": m3,
+    "solutionVideosCount": m4,
     "solutionsSectionTitle": MessageLookupByLibrary.simpleMessage(
       "Explanation & Solution",
     ),
@@ -233,6 +256,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "stillOffline": MessageLookupByLibrary.simpleMessage(
       "Still no internet connection",
     ),
+    "storageUsed": MessageLookupByLibrary.simpleMessage("Storage used"),
     "studentLabel": MessageLookupByLibrary.simpleMessage("Student"),
     "subjects": MessageLookupByLibrary.simpleMessage("Subjects"),
     "subscribed": MessageLookupByLibrary.simpleMessage("Subscribed"),
@@ -251,12 +275,13 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage(
           "There is problem with your connection, please try again",
         ),
-    "timeAgoDays": m4,
-    "timeAgoHours": m5,
-    "timeAgoMinutes": m6,
-    "timeAgoMonths": m7,
+    "timeAgoDays": m5,
+    "timeAgoHours": m6,
+    "timeAgoMinutes": m7,
+    "timeAgoMonths": m8,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("just now"),
-    "timeAgoYears": m8,
+    "timeAgoYears": m9,
+    "totalDuration": MessageLookupByLibrary.simpleMessage("Total time"),
     "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("Unsafe device"),
     "username": MessageLookupByLibrary.simpleMessage("Username"),
     "usernameRequired": MessageLookupByLibrary.simpleMessage(
@@ -269,7 +294,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "Video is processing\nTry again shortly",
     ),
-    "worksheetsWithCount": m9,
+    "worksheetsWithCount": m10,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "Your password must contain at least 8 characters including letters and numbers",

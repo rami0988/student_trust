@@ -68,6 +68,12 @@ dev_dependencies:
   intl_utils: ">=2.8.0 <3.0.0"
   mockito: ">=5.4.0 <6.0.0"
   hive_ce_generator: ">=1.8.0 <2.0.0"
+  # Used by test/features/downloads/encrypted_download_service_test.dart to
+  # point path_provider at a temp dir (there is no platform impl under
+  # `flutter test`). Both are transitive deps of path_provider already;
+  # declared here to satisfy depend_on_referenced_packages.
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 flutter:
   uses-material-design: true

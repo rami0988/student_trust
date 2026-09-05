@@ -26,7 +26,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const String _supportEmail = 'edu285932@gmail.com';
-  static const String _appVersion = '1.0.0';
+  static const String _appVersion = '1.0.1';
 
   // AuthCubit is an app-wide @lazySingleton (see di.config.dart) — read
   // directly rather than closed on dispose, since closing it here would
@@ -304,6 +304,16 @@ class _SettingsPageState extends State<SettingsPage> {
             title: Text(S.of(context).language, style: const TextStyle(fontSize: 15)),
             trailing: _Chip(label: S.of(context).arabic, color: AppColors.primary),
             onTap: _showLanguagePicker,
+          ),
+          const Divider(height: 1),
+          // The offline screen lists downloads too, but it only appears when
+          // there's no connection - this is the only way a connected student
+          // can review or clear what's taking up space on their device.
+          ListTile(
+            leading: const Icon(Icons.download_for_offline_outlined),
+            title: Text(S.of(context).manageDownloads, style: const TextStyle(fontSize: 15)),
+            trailing: const Icon(Icons.chevron_left_rounded),
+            onTap: () => Navigator.of(context).pushNamed(Routes.downloads),
           ),
         ],
       ),

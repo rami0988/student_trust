@@ -22,28 +22,30 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m0(count) => "${count} فيديو محفوظ";
 
-  static String m1(count) => "${count} ملف";
+  static String m1(count) => "تم حذف ${count} درساً";
 
-  static String m2(shown, total) => "عرض ${shown} من ${total}";
+  static String m2(count) => "${count} ملف";
 
-  static String m3(count) => "${count} فيديو حل";
+  static String m3(shown, total) => "عرض ${shown} من ${total}";
 
-  static String m4(count) =>
-      "${Intl.plural(count, one: 'منذ يوم', two: 'منذ يومين', few: 'منذ ${count} أيام', many: 'منذ ${count} يوم', other: 'منذ ${count} يوم')}";
+  static String m4(count) => "${count} فيديو حل";
 
   static String m5(count) =>
-      "${Intl.plural(count, one: 'منذ ساعة', two: 'منذ ساعتين', few: 'منذ ${count} ساعات', many: 'منذ ${count} ساعة', other: 'منذ ${count} ساعة')}";
+      "${Intl.plural(count, one: 'منذ يوم', two: 'منذ يومين', few: 'منذ ${count} أيام', many: 'منذ ${count} يوم', other: 'منذ ${count} يوم')}";
 
   static String m6(count) =>
-      "${Intl.plural(count, one: 'منذ دقيقة', two: 'منذ دقيقتين', few: 'منذ ${count} دقائق', many: 'منذ ${count} دقيقة', other: 'منذ ${count} دقيقة')}";
+      "${Intl.plural(count, one: 'منذ ساعة', two: 'منذ ساعتين', few: 'منذ ${count} ساعات', many: 'منذ ${count} ساعة', other: 'منذ ${count} ساعة')}";
 
   static String m7(count) =>
-      "${Intl.plural(count, one: 'منذ شهر', two: 'منذ شهرين', few: 'منذ ${count} أشهر', many: 'منذ ${count} شهر', other: 'منذ ${count} شهر')}";
+      "${Intl.plural(count, one: 'منذ دقيقة', two: 'منذ دقيقتين', few: 'منذ ${count} دقائق', many: 'منذ ${count} دقيقة', other: 'منذ ${count} دقيقة')}";
 
   static String m8(count) =>
+      "${Intl.plural(count, one: 'منذ شهر', two: 'منذ شهرين', few: 'منذ ${count} أشهر', many: 'منذ ${count} شهر', other: 'منذ ${count} شهر')}";
+
+  static String m9(count) =>
       "${Intl.plural(count, one: 'منذ سنة', two: 'منذ سنتين', few: 'منذ ${count} سنوات', many: 'منذ ${count} سنة', other: 'منذ ${count} سنة')}";
 
-  static String m9(count) => "أوراق العمل (${count})";
+  static String m10(count) => "أوراق العمل (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -75,16 +77,33 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteAccountFailed": MessageLookupByLibrary.simpleMessage(
       "تعذر حذف الحساب، حاول مرة أخرى",
     ),
+    "deleteAllDownloads": MessageLookupByLibrary.simpleMessage(
+      "حذف كل التحميلات",
+    ),
+    "deleteAllDownloadsConfirm": MessageLookupByLibrary.simpleMessage(
+      "سيتم حذف جميع الدروس المحمّلة من هذا الجهاز. يمكنك تحميلها مرة أخرى في أي وقت.",
+    ),
     "deleteDownload": MessageLookupByLibrary.simpleMessage("حذف التحميل"),
     "deleteDownloadConfirm": MessageLookupByLibrary.simpleMessage(
       "هل تريد حذف هذا الدرس من التحميلات؟",
     ),
     "download": MessageLookupByLibrary.simpleMessage("تحميل"),
+    "downloadCorrupted": MessageLookupByLibrary.simpleMessage(
+      "ملف التحميل تالف — يرجى تحميل الدرس من جديد",
+    ),
+    "downloadDeleted": MessageLookupByLibrary.simpleMessage(
+      "تم حذف الدرس من التحميلات",
+    ),
+    "downloadFailed": MessageLookupByLibrary.simpleMessage("فشل التحميل"),
+    "downloadIncomplete": MessageLookupByLibrary.simpleMessage(
+      "انقطع التحميل قبل اكتماله — أعد المحاولة",
+    ),
     "downloadToDeviceTooltip": MessageLookupByLibrary.simpleMessage(
       "تحميل إلى الجهاز",
     ),
     "downloaded": MessageLookupByLibrary.simpleMessage("تم التحميل"),
     "downloadsCount": m0,
+    "downloadsDeleted": m1,
     "downloadsTitle": MessageLookupByLibrary.simpleMessage("التحميلات"),
     "emailCopied": MessageLookupByLibrary.simpleMessage("تم نسخ البريد"),
     "emailFormatNotCorrect": MessageLookupByLibrary.simpleMessage(
@@ -100,7 +119,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "فشل في تحميل البيانات المحفوظة، يرجى المحاولة مجدداً",
     ),
     "fieldIsRequired": MessageLookupByLibrary.simpleMessage("هذا الحقل مطلوب"),
-    "filesCount": m1,
+    "filesCount": m2,
     "filesSectionTitle": MessageLookupByLibrary.simpleMessage("الملفات"),
     "fullNameCanOnlyContainLettersOrSpaces":
         MessageLookupByLibrary.simpleMessage(
@@ -118,6 +137,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "logoutConfirm": MessageLookupByLibrary.simpleMessage(
       "هل تريد تسجيل الخروج؟",
     ),
+    "manageDownloads": MessageLookupByLibrary.simpleMessage("إدارة التحميلات"),
+    "myDownloads": MessageLookupByLibrary.simpleMessage("تحميلاتي"),
     "networkErrorSubtitle": MessageLookupByLibrary.simpleMessage(
       "يبدو أن الاتصال بالإنترنت غير متوفر. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
     ),
@@ -188,6 +209,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "pleaseEnterYourFullName": MessageLookupByLibrary.simpleMessage(
       "الرجاء إدخال اسمك الكامل",
     ),
+    "queuedDownload": MessageLookupByLibrary.simpleMessage("بانتظار الدور"),
     "recordingDetected": MessageLookupByLibrary.simpleMessage(
       "تم رصد تسجيل الشاشة\nأوقف تطبيق التسجيل للمتابعة",
     ),
@@ -196,6 +218,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "retryConnection": MessageLookupByLibrary.simpleMessage(
       "إعادة المحاولة للاتصال",
     ),
+    "retryDownload": MessageLookupByLibrary.simpleMessage("إعادة المحاولة"),
     "savedToDownloads": MessageLookupByLibrary.simpleMessage(
       "تم حفظ الملف في مجلد التنزيلات",
     ),
@@ -220,8 +243,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "settingsSupportSection": MessageLookupByLibrary.simpleMessage("الدعم"),
     "showLess": MessageLookupByLibrary.simpleMessage("عرض أقل"),
     "showMore": MessageLookupByLibrary.simpleMessage("عرض المزيد"),
-    "showingOfTotal": m2,
-    "solutionVideosCount": m3,
+    "showingOfTotal": m3,
+    "solutionVideosCount": m4,
     "solutionsSectionTitle": MessageLookupByLibrary.simpleMessage("شرح وحل"),
     "somethingWentWrong": MessageLookupByLibrary.simpleMessage(
       "عفواً! حدث خطأ ما",
@@ -229,6 +252,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "stillOffline": MessageLookupByLibrary.simpleMessage(
       "ما زلت غير متصل بالإنترنت",
     ),
+    "storageUsed": MessageLookupByLibrary.simpleMessage("المساحة المستخدمة"),
     "studentLabel": MessageLookupByLibrary.simpleMessage("طالب"),
     "subjects": MessageLookupByLibrary.simpleMessage("المواد الدراسية"),
     "subscribed": MessageLookupByLibrary.simpleMessage("مشترك"),
@@ -247,12 +271,13 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage(
           "هناك مشكلة بالاتصال بالشبكة الرجاء إعادة المحاولة لاحقاً",
         ),
-    "timeAgoDays": m4,
-    "timeAgoHours": m5,
-    "timeAgoMinutes": m6,
-    "timeAgoMonths": m7,
+    "timeAgoDays": m5,
+    "timeAgoHours": m6,
+    "timeAgoMinutes": m7,
+    "timeAgoMonths": m8,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("الآن"),
-    "timeAgoYears": m8,
+    "timeAgoYears": m9,
+    "totalDuration": MessageLookupByLibrary.simpleMessage("المدة الإجمالية"),
     "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("جهاز غير آمن"),
     "username": MessageLookupByLibrary.simpleMessage("اسم المستخدم"),
     "usernameRequired": MessageLookupByLibrary.simpleMessage(
@@ -265,7 +290,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "الفيديو قيد المعالجة\nحاول مرة أخرى بعد قليل",
     ),
-    "worksheetsWithCount": m9,
+    "worksheetsWithCount": m10,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل تشمل حروفاً وأرقاماً",

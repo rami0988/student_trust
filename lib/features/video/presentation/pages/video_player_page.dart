@@ -14,6 +14,7 @@ import '../../../../core/utils/duration_utils.dart';
 import '../../../../core/utils/local_storage_keys.dart';
 import '../../../../core/utils/shared_preferences_helper.dart';
 import '../../../../generated/l10n.dart';
+import '../../../downloads/data/services/encrypted_download_service.dart';
 import '../../../lessons/domain/repositories/lessons_repository.dart';
 import '../cubit/video_cubit.dart';
 import '../cubit/video_state.dart';
@@ -63,6 +64,11 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
   /// (rotated) BunnyCDN signed URL so we can swap the data source in place.
   String? _currentUrl;
   bool _refreshing = false;
+
+  /// Ceiling on URL re-resolves. Two covers the real case (a signature that
+  /// expired, plus one race); beyond that the failure isn't about the URL.
+  static const int _maxRefreshAttempts = 2;
+  int _refreshAttempts = 0;
 
   @override
   void initState() {
@@ -189,6 +195,10 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
         await _betterPlayerController!.seekTo(Duration(seconds: state.savedPosition));
       }
       await _betterPlayerController!.play();
+      // Playback resumed on the new URL, so the budget is about consecutive
+      // failures, not lifetime ones — a three-hour lesson may legitimately
+      // outlive several signatures.
+      _refreshAttempts = 0;
     } catch (_) {
       // Ignore — the next event or user retry will recover.
     } finally {
@@ -219,11 +229,27 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
 
   void _onPlayerEvent(BetterPlayerEvent event) {
     if (event.betterPlayerEventType == BetterPlayerEventType.exception) {
-      // A BunnyCDN signed URL likely expired mid-playback — re-resolve it.
+      // The usual cause is an expired BunnyCDN signature, which a fresh URL
+      // fixes. But the player raises the same event for a corrupt file or an
+      // unsupported codec, and those never recover — without a ceiling the
+      // page spins exception → refresh → exception forever, showing the
+      // student a permanently loading video instead of an error.
       if (widget.args.isOffline || _refreshing) return;
+      if (_refreshAttempts >= _maxRefreshAttempts) {
+        _showPlaybackError();
+        return;
+      }
+      _refreshAttempts++;
       _refreshing = true;
       context.read<VideoCubit>().refreshVideoUrl(widget.args.lessonId, savedPosition: _currentPositionSeconds);
     }
+  }
+
+  /// Gives up on re-resolving and tells the student plainly. Uses the cubit's
+  /// own failure state so this renders as the page's normal error view.
+  void _showPlaybackError() {
+    if (!mounted) return;
+    context.read<VideoCubit>().reportPlaybackFailure(S.of(context).somethingWentWrong);
   }
 
   /// Stops audio when the app is backgrounded — leaving via the home button
@@ -259,9 +285,15 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
     // audio forever after the page is gone.
     _betterPlayerController?.pause();
     _betterPlayerController?.dispose(forceDispose: true);
-    // TODO(migration): wipe the decrypted temp file for offline playback once
-    // EncryptedDownloadService is migrated (task #10) — mirrors OLD app's
-    // VideoPlayerScreen.dispose clearTempFile call.
+    // Offline playback decrypts the lesson into a plaintext temp file. Leaving
+    // it behind hands anyone with file access an unencrypted copy of every
+    // lesson the student has watched — which defeats the point of encrypting
+    // the chunks at rest — and it accumulates. Fire-and-forget: dispose can't
+    // await, and a failed cleanup must never break leaving the screen (the
+    // 2-hour staleness check and deleteLesson both still cover it).
+    if (widget.args.isOffline) {
+      unawaited(getIt<EncryptedDownloadService>().clearTempFile(widget.args.lessonId).catchError((_) {}));
+    }
     super.dispose();
   }
 

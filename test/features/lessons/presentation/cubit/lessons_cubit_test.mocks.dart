@@ -169,7 +169,7 @@ class MockEncryptedDownloadService extends _i1.Mock
     required String? videoUrl,
     required String? studentId,
     required String? deviceUuid,
-    required String? accessToken,
+    required _i4.Future<String> Function()? accessToken,
     required void Function(double)? onProgress,
     String? title = '',
     int? durationSeconds = 0,
@@ -262,6 +262,24 @@ class MockEncryptedDownloadService extends _i1.Mock
           as _i4.Future<void>);
 
   @override
+  _i4.Future<void> markDamaged(String? lessonId) =>
+      (super.noSuchMethod(
+            Invocation.method(#markDamaged, [lessonId]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<int> reconcileOnStartup() =>
+      (super.noSuchMethod(
+            Invocation.method(#reconcileOnStartup, []),
+            returnValue: _i4.Future<int>.value(0),
+            returnValueForMissingStub: _i4.Future<int>.value(0),
+          )
+          as _i4.Future<int>);
+
+  @override
   _i4.Future<void> deleteLesson(String? lessonId) =>
       (super.noSuchMethod(
             Invocation.method(#deleteLesson, [lessonId]),
@@ -269,6 +287,15 @@ class MockEncryptedDownloadService extends _i1.Mock
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
           as _i4.Future<void>);
+
+  @override
+  _i4.Future<int> deleteAll() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteAll, []),
+            returnValue: _i4.Future<int>.value(0),
+            returnValueForMissingStub: _i4.Future<int>.value(0),
+          )
+          as _i4.Future<int>);
 
   @override
   _i4.Future<void> clearTempFile(String? lessonId) =>
@@ -295,6 +322,15 @@ class MockEncryptedDownloadService extends _i1.Mock
             returnValueForMissingStub: null,
           )
           as int?);
+
+  @override
+  int totalBytesUsed() =>
+      (super.noSuchMethod(
+            Invocation.method(#totalBytesUsed, []),
+            returnValue: 0,
+            returnValueForMissingStub: 0,
+          )
+          as int);
 
   @override
   List<_i9.DownloadedLessonInfo> getDownloadedLessons() =>

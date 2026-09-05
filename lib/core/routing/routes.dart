@@ -15,5 +15,9 @@ abstract class Routes {
   static const String worksheetView = '/worksheetView';
   static const String pdfViewer = '/pdfViewer';
   static const String offlineHome = '/offlineHome';
+
+  /// Manage downloaded lessons while online (the offline screen shows the
+  /// same list, but only appears when there is no connection).
+  static const String downloads = '/downloads';
   static const String settings = '/settings';
 }

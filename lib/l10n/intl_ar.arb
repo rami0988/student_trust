@@ -122,5 +122,25 @@
   "timeAgoMonths": "{count, plural, one{منذ شهر} two{منذ شهرين} few{منذ {count} أشهر} many{منذ {count} شهر} other{منذ {count} شهر}}",
   "timeAgoNow": "الآن",
   "timeAgoYears": "{count, plural, one{منذ سنة} two{منذ سنتين} few{منذ {count} سنوات} many{منذ {count} سنة} other{منذ {count} سنة}}",
-  "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers": "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل تشمل حروفاً وأرقاماً"
+  "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers": "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل تشمل حروفاً وأرقاماً",
+  "queuedDownload": "بانتظار الدور",
+  "downloadFailed": "فشل التحميل",
+  "retryDownload": "إعادة المحاولة",
+  "downloadCorrupted": "ملف التحميل تالف — يرجى تحميل الدرس من جديد",
+  "downloadIncomplete": "انقطع التحميل قبل اكتماله — أعد المحاولة",
+  "myDownloads": "تحميلاتي",
+  "manageDownloads": "إدارة التحميلات",
+  "storageUsed": "المساحة المستخدمة",
+  "deleteAllDownloads": "حذف كل التحميلات",
+  "deleteAllDownloadsConfirm": "سيتم حذف جميع الدروس المحمّلة من هذا الجهاز. يمكنك تحميلها مرة أخرى في أي وقت.",
+  "downloadsDeleted": "تم حذف {count} درساً",
+  "downloadDeleted": "تم حذف الدرس من التحميلات",
+  "@downloadsDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "totalDuration": "المدة الإجمالية"
 }

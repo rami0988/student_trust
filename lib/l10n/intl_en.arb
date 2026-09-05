@@ -17,8 +17,12 @@
   "showingOfTotal": "Showing {shown} of {total}",
   "@showingOfTotal": {
     "placeholders": {
-      "shown": {"type": "int"},
-      "total": {"type": "int"}
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "settings": "Settings",
@@ -37,7 +41,9 @@
   "worksheetsWithCount": "Worksheets ({count})",
   "@worksheetsWithCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noWorksheets": "No worksheets yet",
@@ -67,7 +73,9 @@
   "downloadsCount": "{count} downloaded",
   "@downloadsCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "settingsAccountSection": "Account",
@@ -103,13 +111,17 @@
   "filesCount": "{count} files",
   "@filesCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "solutionVideosCount": "{count} solution videos",
   "@solutionVideosCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "back": "Back",
@@ -148,5 +160,25 @@
   "timeAgoMonths": "{count, plural, one{{count} month ago} other{{count} months ago}}",
   "timeAgoNow": "just now",
   "timeAgoYears": "{count, plural, one{{count} year ago} other{{count} years ago}}",
-  "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers": "Your password must contain at least 8 characters including letters and numbers"
+  "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers": "Your password must contain at least 8 characters including letters and numbers",
+  "queuedDownload": "Waiting",
+  "downloadFailed": "Download failed",
+  "retryDownload": "Try again",
+  "downloadCorrupted": "This download is damaged - please download the lesson again",
+  "downloadIncomplete": "The download stopped before it finished - please try again",
+  "myDownloads": "My downloads",
+  "manageDownloads": "Manage downloads",
+  "storageUsed": "Storage used",
+  "deleteAllDownloads": "Delete all downloads",
+  "deleteAllDownloadsConfirm": "Every downloaded lesson will be removed from this device. You can download them again any time.",
+  "downloadsDeleted": "Deleted {count} lessons",
+  "downloadDeleted": "Lesson removed from downloads",
+  "@downloadsDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "totalDuration": "Total time"
 }

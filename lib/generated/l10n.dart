@@ -1095,6 +1095,126 @@ class S {
       args: [],
     );
   }
+
+  /// `Waiting`
+  String get queuedDownload {
+    return Intl.message('Waiting', name: 'queuedDownload', desc: '', args: []);
+  }
+
+  /// `Download failed`
+  String get downloadFailed {
+    return Intl.message(
+      'Download failed',
+      name: 'downloadFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Try again`
+  String get retryDownload {
+    return Intl.message('Try again', name: 'retryDownload', desc: '', args: []);
+  }
+
+  /// `This download is damaged - please download the lesson again`
+  String get downloadCorrupted {
+    return Intl.message(
+      'This download is damaged - please download the lesson again',
+      name: 'downloadCorrupted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The download stopped before it finished - please try again`
+  String get downloadIncomplete {
+    return Intl.message(
+      'The download stopped before it finished - please try again',
+      name: 'downloadIncomplete',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `My downloads`
+  String get myDownloads {
+    return Intl.message(
+      'My downloads',
+      name: 'myDownloads',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Manage downloads`
+  String get manageDownloads {
+    return Intl.message(
+      'Manage downloads',
+      name: 'manageDownloads',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Storage used`
+  String get storageUsed {
+    return Intl.message(
+      'Storage used',
+      name: 'storageUsed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Delete all downloads`
+  String get deleteAllDownloads {
+    return Intl.message(
+      'Delete all downloads',
+      name: 'deleteAllDownloads',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Every downloaded lesson will be removed from this device. You can download them again any time.`
+  String get deleteAllDownloadsConfirm {
+    return Intl.message(
+      'Every downloaded lesson will be removed from this device. You can download them again any time.',
+      name: 'deleteAllDownloadsConfirm',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Deleted {count} lessons`
+  String downloadsDeleted(int count) {
+    return Intl.message(
+      'Deleted $count lessons',
+      name: 'downloadsDeleted',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Lesson removed from downloads`
+  String get downloadDeleted {
+    return Intl.message(
+      'Lesson removed from downloads',
+      name: 'downloadDeleted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Total time`
+  String get totalDuration {
+    return Intl.message(
+      'Total time',
+      name: 'totalDuration',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

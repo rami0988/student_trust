@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/endpoints.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/utils.dart';
 import '../../../../generated/l10n.dart';
 import '../../domain/entities/download_item.dart';
 import '../cubit/download_cubit.dart';
@@ -32,23 +33,33 @@ class DownloadButton extends StatelessWidget {
 
         if (item != null) {
           switch (item.status) {
+            case DownloadItemStatus.queued:
+              return _ActiveControls(
+                progress: item.progress,
+                state: _ControlsState.queued,
+                onPauseResume: () => cubit.pauseDownload(lessonId),
+                onCancel: () => cubit.cancelDownload(lessonId),
+              );
             case DownloadItemStatus.downloading:
               return _ActiveControls(
                 progress: item.progress,
-                paused: false,
+                state: _ControlsState.downloading,
                 onPauseResume: () => cubit.pauseDownload(lessonId),
                 onCancel: () => cubit.cancelDownload(lessonId),
               );
             case DownloadItemStatus.paused:
               return _ActiveControls(
                 progress: item.progress,
-                paused: true,
+                state: _ControlsState.paused,
                 onPauseResume: () => cubit.resumeDownload(lessonId),
                 onCancel: () => cubit.cancelDownload(lessonId),
               );
             case DownloadItemStatus.completed:
               return _downloadedButton(context, cubit);
             case DownloadItemStatus.failed:
+              // Surface the reason instead of silently reverting to a plain
+              // download icon, which reads as "nothing happened".
+              return _failedButton(context, cubit, item.error);
             case DownloadItemStatus.deleted:
               return _downloadButton(context, cubit);
           }
@@ -72,6 +83,23 @@ class DownloadButton extends StatelessWidget {
         icon: const Icon(Icons.download_outlined, color: AppColors.primary),
         onPressed: () =>
             cubit.startDownload(lessonId: lessonId, videoUrl: _videoUrl, title: lessonTitle, durationSeconds: durationSeconds, thumbnailUrl: thumbnailUrl),
+      ),
+    );
+  }
+
+  /// Failed download: a retry affordance plus the reason on long-press, so a
+  /// student isn't left guessing why the lesson never arrived.
+  Widget _failedButton(BuildContext context, DownloadCubit cubit, String? error) {
+    return Semantics(
+      button: true,
+      label: S.of(context).retryDownload,
+      child: IconButton(
+        tooltip: error?.isNotEmpty == true ? error : S.of(context).downloadFailed,
+        icon: const Icon(Icons.refresh_rounded, color: AppColors.error),
+        onPressed: () {
+          if (error != null && error.isNotEmpty) showToastMessage(error);
+          cubit.startDownload(lessonId: lessonId, videoUrl: _videoUrl, title: lessonTitle, durationSeconds: durationSeconds, thumbnailUrl: thumbnailUrl);
+        },
       ),
     );
   }
@@ -106,22 +134,33 @@ class DownloadButton extends StatelessWidget {
   }
 }
 
+/// Which of the three in-flight shapes the control is showing.
+enum _ControlsState { queued, downloading, paused }
+
 /// Progress ring with a pause/resume tap target, plus a cancel button.
 class _ActiveControls extends StatelessWidget {
   final double progress;
-  final bool paused;
+  final _ControlsState state;
   final VoidCallback onPauseResume;
   final VoidCallback onCancel;
 
-  const _ActiveControls({required this.progress, required this.paused, required this.onPauseResume, required this.onCancel});
+  const _ActiveControls({required this.progress, required this.state, required this.onPauseResume, required this.onCancel});
+
+  bool get _paused => state == _ControlsState.paused;
+  bool get _queued => state == _ControlsState.queued;
 
   @override
   Widget build(BuildContext context) {
+    final Color color = _paused || _queued ? AppColors.textSecondary : AppColors.primary;
+    final String tooltip = _queued
+        ? S.of(context).queuedDownload
+        : (_paused ? S.of(context).resumeDownload : S.of(context).pauseDownload);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Tooltip(
-          message: paused ? S.of(context).resumeDownload : S.of(context).pauseDownload,
+          message: tooltip,
           child: InkWell(
             onTap: onPauseResume,
             customBorder: const CircleBorder(),
@@ -131,8 +170,18 @@ class _ActiveControls extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  CircularProgressIndicator(value: progress == 0 ? null : progress, strokeWidth: 3, color: paused ? AppColors.textSecondary : AppColors.primary),
-                  Icon(paused ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 18, color: paused ? AppColors.textSecondary : AppColors.primary),
+                  CircularProgressIndicator(
+                    // Queued has no progress of its own yet - an indeterminate
+                    // spinner reads as "waiting" rather than "stuck at 0%".
+                    value: _queued || progress == 0 ? null : progress,
+                    strokeWidth: 3,
+                    color: color,
+                  ),
+                  Icon(
+                    _queued ? Icons.schedule_rounded : (_paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+                    size: 18,
+                    color: color,
+                  ),
                 ],
               ),
             ),

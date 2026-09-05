@@ -30,6 +30,13 @@ void main() async {
   await Hive.initFlutter();
   await Hive.openBox(EncryptedDownloadService.boxName);
   await configureDependencies();
+  // Repair anything a kill/crash left half-finished before any screen reads
+  // the store: an app killed mid-download leaves a partial file, and a lesson
+  // whose chunks were purged by the OS would otherwise still be offered as
+  // playable and then fail. Best effort - never block startup on it.
+  try {
+    await getIt<EncryptedDownloadService>().reconcileOnStartup();
+  } catch (_) {}
   runApp(
     BlocProvider<AppCubit>(
       create: (context) => getIt<AppCubit>()

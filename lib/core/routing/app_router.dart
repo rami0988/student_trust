@@ -10,6 +10,7 @@ import '../../features/chapters/presentation/pages/chapters_page.dart';
 import '../../features/lessons/presentation/cubit/lessons_cubit.dart';
 import '../../features/lessons/presentation/pages/lessons_args.dart';
 import '../../features/lessons/presentation/pages/lessons_page.dart';
+import '../../features/downloads/presentation/pages/downloads_page.dart';
 import '../../features/offline/presentation/pages/offline_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/subjects/presentation/cubit/subjects_cubit.dart';
@@ -87,6 +88,11 @@ class AppRouter {
         return RouterTransitions.buildDefault(
           settings: RouteSettings(name: Routes.offlineHome, arguments: arguments),
           const OfflinePage(),
+        );
+      case Routes.downloads:
+        return RouterTransitions.buildDefault(
+          settings: RouteSettings(name: Routes.downloads, arguments: arguments),
+          const DownloadsPage(),
         );
       case Routes.worksheets:
         final WorksheetsArgs worksheetsArgs = arguments as WorksheetsArgs;

@@ -2,12 +2,14 @@ import 'package:dio/dio.dart';
 
 import '../di/di.dart';
 import '../extensions/strings.dart';
+import '../services/device_service.dart';
 import '../utils/local_storage_keys.dart';
 import '../utils/shared_preferences_helper.dart';
 import 'network_info.dart';
 
 class AuthInterceptor extends Interceptor {
   final NetworkInfo _networkInfo = getIt<NetworkInfo>();
+  final DeviceService _deviceService = getIt<DeviceService>();
 
   String get _language => SharedPreferencesHelper.getString(LocalStorageKeys.language);
 
@@ -50,6 +52,15 @@ class AuthInterceptor extends Interceptor {
     if (!accessToken.isNullOrEmpty()) {
       options.headers['Authorization'] = 'Bearer $accessToken';
     }
+
+    // Sent on every request, not just login: the backend re-checks the bound
+    // device on each student call, so that a copied token alone is not enough
+    // to use the account from a second phone. Best effort — if the id can't be
+    // read we still send the request and let the server decide, rather than
+    // blocking the student on a local storage hiccup.
+    try {
+      options.headers['X-Device-ID'] = await _deviceService.getDeviceUuid();
+    } catch (_) {}
 
     return handler.next(options);
   }

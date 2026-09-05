@@ -152,6 +152,19 @@ class VideoCubit extends Cubit<VideoState> {
         );
         return;
       }
+      // The download is present in metadata but unusable on disk (missing or
+      // undecryptable chunks). The service has already dropped it, so tell the
+      // student to download it again rather than surfacing a raw exception.
+      if (error.toString().contains('DOWNLOAD_CORRUPTED')) {
+        emit(
+          state.rebuild(
+            (b) => b
+              ..status = Status.failure
+              ..failure = GeneralFailure(S.current.downloadCorrupted),
+          ),
+        );
+        return;
+      }
       rethrow;
     }
   }
@@ -171,6 +184,20 @@ class VideoCubit extends Cubit<VideoState> {
     );
     _lastReady = next;
     emit(next);
+  }
+
+  /// Surfaces a playback failure the player couldn't recover from by
+  /// re-resolving the URL. Without this the page would sit on a dead player
+  /// with no message, since a decode/codec error never resolves itself.
+  void reportPlaybackFailure(String message) {
+    emit(
+      state.rebuild(
+        (b) => b
+          ..status = Status.failure
+          ..isProcessing = false
+          ..failure = GeneralFailure(message),
+      ),
+    );
   }
 
   /// Called when native screen-recording detection fires.

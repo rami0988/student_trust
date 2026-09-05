@@ -104,8 +104,11 @@ that fetches video probes with `Range: bytes=0-1` to tell them apart — see
 Treat these as load-bearing; don't weaken them while refactoring.
 
 - **Device binding** — `DeviceService` derives a stable per-install UUID (SHA-256 of
-  hardware identifiers), cached in secure storage. Sent as `X-Device-ID` on login for
-  single-device enforcement, and fed into the offline encryption key.
+  hardware identifiers), cached in secure storage. Sent as `X-Device-ID` by `AuthInterceptor`
+  on **every** request (not only login): the backend binds the device at login and re-checks
+  it per request, so a copied token alone can't unlock the account on a second phone.
+  `EncryptedDownloadService` runs on its own Dio without the app's interceptors, so it sets
+  that header itself. The same UUID is fed into the offline encryption key.
 - **Emulator block** — `AuthGate` refuses to proceed on a non-physical device. Root/jailbreak
   detection is *not* wired up: `flutter_jailbreak_detection` was removed because its
   `build.gradle` predates AGP namespaces and breaks under this project's AGP 9.
