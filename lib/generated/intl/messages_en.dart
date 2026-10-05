@@ -294,6 +294,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "Video is processing\nTry again shortly",
     ),
+    "weakConnectionRetrying": MessageLookupByLibrary.simpleMessage(
+      "Weak connection, retrying...",
+    ),
     "worksheetsWithCount": m10,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(

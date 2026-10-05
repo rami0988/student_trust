@@ -142,5 +142,6 @@
       }
     }
   },
-  "totalDuration": "المدة الإجمالية"
+  "totalDuration": "المدة الإجمالية",
+  "weakConnectionRetrying": "ضعف في الاتصال، جاري إعادة المحاولة..."
 }

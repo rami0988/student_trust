@@ -26,7 +26,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const String _supportEmail = 'edu285932@gmail.com';
-  static const String _appVersion = '1.0.1';
+  static const String _appVersion = '1.0.2';
 
   // AuthCubit is an app-wide @lazySingleton (see di.config.dart) — read
   // directly rather than closed on dispose, since closing it here would

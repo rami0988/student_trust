@@ -9,6 +9,7 @@ import '../../../../core/di/di.dart';
 import '../../../../core/network/endpoints.dart';
 import '../../../../core/services/device_service.dart';
 import '../../../../core/services/security_service.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/colors_manager.dart';
 import '../../../../core/utils/duration_utils.dart';
 import '../../../../core/utils/local_storage_keys.dart';
@@ -28,7 +29,10 @@ class VideoPlayerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<VideoCubit>(create: (_) => getIt<VideoCubit>(), child: _VideoPlayerView(args: args));
+    return BlocProvider<VideoCubit>(
+      create: (_) => getIt<VideoCubit>(),
+      child: _VideoPlayerView(args: args),
+    );
   }
 }
 
@@ -63,12 +67,24 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
   /// The URL currently loaded into the player, used to detect a refreshed
   /// (rotated) BunnyCDN signed URL so we can swap the data source in place.
   String? _currentUrl;
-  bool _refreshing = false;
 
-  /// Ceiling on URL re-resolves. Two covers the real case (a signature that
-  /// expired, plus one race); beyond that the failure isn't about the URL.
-  static const int _maxRefreshAttempts = 2;
-  int _refreshAttempts = 0;
+  /// Ceiling on playback-recovery attempts before the student is shown a real
+  /// error. Four retries with backoff covers a tunnel, a lift, or a cell/Wi-Fi
+  /// handover; past that the problem isn't transient.
+  static const int _maxRecoveryAttempts = 4;
+  int _recoveryAttempts = 0;
+
+  /// True while a recovery attempt is scheduled or in flight, so the burst of
+  /// exception events a single failure produces collapses into one retry.
+  bool _recovering = false;
+
+  /// Drives the non-intrusive buffering overlay (instead of an error screen).
+  bool _isRecovering = false;
+  Timer? _recoveryTimer;
+
+  /// Last position known to be playing, so a recovery resumes where the
+  /// student was rather than at 0 — reading it after the failure returns 0.
+  int _lastGoodPositionSeconds = 0;
 
   @override
   void initState() {
@@ -123,7 +139,16 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
 
   int get _currentPositionSeconds => _betterPlayerController?.videoPlayerController?.value.position.inSeconds ?? 0;
 
+  /// Remembers the newest non-zero position while playback is healthy. After a
+  /// failure the controller reports 0, so recovery needs this to resume where
+  /// the student actually was instead of restarting the lesson.
+  void _rememberPosition() {
+    final int pos = _currentPositionSeconds;
+    if (pos > 0) _lastGoodPositionSeconds = pos;
+  }
+
   Future<void> _saveCurrentProgress() async {
+    _rememberPosition();
     if (!widget.args.trackProgress) return;
     final int pos = _currentPositionSeconds;
     if (pos <= 0) return;
@@ -134,8 +159,26 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
     }
   }
 
+  /// Buffering tuned for the slow, intermittent mobile connections most
+  /// students are on.
+  ///
+  /// ExoPlayer's defaults start playback after only 2.5s of buffer and resume
+  /// after a stall on 5s, which on a weak link means a seek into unbuffered
+  /// video repeatedly starves and gives up. Asking for a deeper cushion makes
+  /// a seek wait and fill rather than fail, at the cost of a slightly longer
+  /// spinner. `maxBufferMs` is left at the package default (~109 min, i.e.
+  /// "buffer as far ahead as you like") — raising it buys nothing and only
+  /// risks memory pressure on cheap devices.
+  static const BetterPlayerBufferingConfiguration _buffering = BetterPlayerBufferingConfiguration(
+    minBufferMs: 50000,
+    bufferForPlaybackMs: 5000,
+    bufferForPlaybackAfterRebufferMs: 10000,
+  );
+
   BetterPlayerDataSource _dataSourceFor(VideoState state) {
     if (state.isLocal) {
+      // Local file: decode-only, no network, so the buffering cushion above is
+      // irrelevant — the defaults are correct here.
       return BetterPlayerDataSource(BetterPlayerDataSourceType.file, state.videoUrl!.replaceFirst('file://', ''));
     }
     // BunnyCDN pull-zone requests must carry the embed Referer (the library
@@ -144,6 +187,7 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
       BetterPlayerDataSourceType.network,
       state.videoUrl!,
       headers: state.authToken != null ? {'Authorization': 'Bearer ${state.authToken}'} : BunnyConstants.cdnHeaders,
+      bufferingConfiguration: _buffering,
     );
   }
 
@@ -195,14 +239,15 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
         await _betterPlayerController!.seekTo(Duration(seconds: state.savedPosition));
       }
       await _betterPlayerController!.play();
-      // Playback resumed on the new URL, so the budget is about consecutive
-      // failures, not lifetime ones — a three-hour lesson may legitimately
-      // outlive several signatures.
-      _refreshAttempts = 0;
+      // Playback resumed, so the budget is about CONSECUTIVE failures, not
+      // lifetime ones — a three-hour lesson may legitimately outlive several
+      // signatures and survive several tunnels.
+      _recoveryAttempts = 0;
+      if (mounted) setState(() => _isRecovering = false);
     } catch (_) {
-      // Ignore — the next event or user retry will recover.
+      // Ignore — the next exception event continues the recovery ladder.
     } finally {
-      _refreshing = false;
+      _recovering = false;
     }
   }
 
@@ -228,21 +273,72 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
   }
 
   void _onPlayerEvent(BetterPlayerEvent event) {
-    if (event.betterPlayerEventType == BetterPlayerEventType.exception) {
-      // The usual cause is an expired BunnyCDN signature, which a fresh URL
-      // fixes. But the player raises the same event for a corrupt file or an
-      // unsupported codec, and those never recover — without a ceiling the
-      // page spins exception → refresh → exception forever, showing the
-      // student a permanently loading video instead of an error.
-      if (widget.args.isOffline || _refreshing) return;
-      if (_refreshAttempts >= _maxRefreshAttempts) {
-        _showPlaybackError();
+    if (event.betterPlayerEventType == BetterPlayerEventType.progress) {
+      _rememberPosition();
+      return;
+    }
+    if (event.betterPlayerEventType != BetterPlayerEventType.exception) return;
+
+    // A network hiccup — very often a seek into not-yet-buffered video on a
+    // weak connection — surfaces here identically to a genuinely broken file.
+    // Treating every one as fatal is what put the "لا يمكن تشغيل الفيديو"
+    // error over a video that would have played a second later.
+    //
+    // So recover first and only report a failure once recovery is exhausted:
+    // reload the same position, backing off between tries. Offline playback
+    // gets the same treatment minus the URL re-resolve, since a local file has
+    // no URL to refresh — a transient decoder error on a cold read still
+    // deserves a retry rather than an error screen.
+    if (_recovering) return;
+    if (_recoveryAttempts >= _maxRecoveryAttempts) {
+      _showPlaybackError();
+      return;
+    }
+
+    _recovering = true;
+    _recoveryAttempts++;
+    // 1s, 2s, 4s, 8s — long enough for a phone switching cell/Wi-Fi to settle.
+    final Duration backoff = Duration(milliseconds: 500 * (1 << _recoveryAttempts));
+    setState(() => _isRecovering = true);
+
+    _recoveryTimer?.cancel();
+    _recoveryTimer = Timer(backoff, () {
+      if (!mounted) {
+        _recovering = false;
         return;
       }
-      _refreshAttempts++;
-      _refreshing = true;
-      context.read<VideoCubit>().refreshVideoUrl(widget.args.lessonId, savedPosition: _currentPositionSeconds);
+      if (widget.args.isOffline) {
+        unawaited(_retryCurrentSource());
+      } else {
+        // Re-resolving also re-signs the CDN URL, which covers the other
+        // common cause (an expired signature) in the same path.
+        context.read<VideoCubit>().refreshVideoUrl(widget.args.lessonId, savedPosition: _lastGoodPositionSeconds);
+      }
+    });
+  }
+
+  /// Reloads the current data source at the last known position. Used for
+  /// offline recovery, where there is no URL to re-resolve.
+  Future<Duration?> _retryCurrentSource() async {
+    final BetterPlayerController? controller = _betterPlayerController;
+    final VideoState state = context.read<VideoCubit>().state;
+    if (controller == null || state.videoUrl == null) {
+      _recovering = false;
+      return null;
     }
+    final Duration target = Duration(seconds: _lastGoodPositionSeconds);
+    try {
+      await controller.setupDataSource(_dataSourceFor(state));
+      if (target > Duration.zero) await controller.seekTo(target);
+      await controller.play();
+      if (mounted) setState(() => _isRecovering = false);
+      _recoveryAttempts = 0;
+    } catch (_) {
+      // Leave the ladder to the next exception event.
+    } finally {
+      _recovering = false;
+    }
+    return target;
   }
 
   /// Gives up on re-resolving and tells the student plainly. Uses the cubit's
@@ -275,6 +371,7 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
     _securityService.disableSecureScreen();
     _saveCurrentProgress();
     _progressTimer?.cancel();
+    _recoveryTimer?.cancel();
     _captureSub?.cancel();
     // Pause first so audio stops instantly rather than at the end of the exit
     // animation. `forceDispose: true` is REQUIRED:
@@ -309,7 +406,11 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
           : AppBar(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
-              title: Text(widget.args.lessonTitle, style: const TextStyle(color: Colors.white), overflow: TextOverflow.ellipsis),
+              title: Text(
+                widget.args.lessonTitle,
+                style: const TextStyle(color: Colors.white),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
       body: BlocConsumer<VideoCubit, VideoState>(
         listener: (context, state) {
@@ -343,6 +444,9 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
       children: [
         BetterPlayer(key: _playerKey, controller: controller),
         VideoWatermark(studentName: widget.args.studentName, phoneNumber: widget.args.studentPhone),
+        // Non-intrusive: the video stays mounted and keeps its position
+        // underneath, so a recovered hiccup resumes rather than restarts.
+        if (_isRecovering) const _BufferingOverlay(),
         if (state.isRecordingDetected) const SecurityOverlay(),
       ],
     );
@@ -404,7 +508,10 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
                   children: [
                     const Icon(Icons.timer_outlined, color: Colors.white54, size: 14),
                     const SizedBox(width: 4),
-                    Text(DurationUtils.format(_currentPositionSeconds), style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text(
+                      DurationUtils.format(_currentPositionSeconds),
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
                   ],
                 ),
               ],
@@ -418,6 +525,41 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
 
 /// Small translucent circular button drawn over the video (fullscreen
 /// enter/exit). Kept above the player so it works with the controls hidden.
+/// Shown over the still-mounted player while a transient playback failure is
+/// being retried. Deliberately quiet — a spinner and one line, not an error —
+/// because the common cause is a seek into unbuffered video on a weak
+/// connection, which resolves itself within a second or two.
+class _BufferingOverlay extends StatelessWidget {
+  const _BufferingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black38,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+          ),
+          const SizedBox(height: AppTokens.s12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.s20),
+            child: Text(
+              S.of(context).weakConnectionRetrying,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _VideoOverlayButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
@@ -431,7 +573,11 @@ class _VideoOverlayButton extends StatelessWidget {
       color: Colors.black45,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
-      child: IconButton(tooltip: tooltip, icon: Icon(icon, color: Colors.white), onPressed: onPressed),
+      child: IconButton(
+        tooltip: tooltip,
+        icon: Icon(icon, color: Colors.white),
+        onPressed: onPressed,
+      ),
     );
   }
 }
@@ -452,7 +598,11 @@ class _ProcessingView extends StatelessWidget {
           children: [
             const Icon(Icons.hourglass_top, color: Colors.white, size: 56),
             const SizedBox(height: 16),
-            Text(S.of(context).videoProcessingMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 16)),
+            Text(
+              S.of(context).videoProcessingMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
             const SizedBox(height: 20),
             ElevatedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: Text(S.of(context).retry)),
             const SizedBox(height: 8),
@@ -481,7 +631,11 @@ class _ErrorView extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, color: Colors.white, size: 56),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 16)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: Text(S.of(context).back)),
           ],

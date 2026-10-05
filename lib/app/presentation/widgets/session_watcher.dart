@@ -33,6 +33,13 @@ class SessionWatcher extends StatefulWidget {
 class _SessionWatcherState extends State<SessionWatcher> {
   StreamSubscription<SessionExpiredEvent>? _subscription;
 
+  /// One dead session raises one event per in-flight request (they all 401
+  /// together). Only the first may tear down and navigate; the rest arrive
+  /// within this window and are dropped, so the student lands on login once
+  /// instead of being bounced through the gate repeatedly.
+  static const Duration _dedupeWindow = Duration(seconds: 2);
+  DateTime? _lastHandledAt;
+
   @override
   void initState() {
     super.initState();
@@ -46,10 +53,16 @@ class _SessionWatcherState extends State<SessionWatcher> {
   }
 
   void _onSessionExpired(SessionExpiredEvent event) {
-    // Clear the stored token/user (device id is kept, same as a manual
-    // logout) so the auth gate's silent auto-login can't just log back in
-    // with the same expired token.
-    getIt<AuthCubit>().logout();
+    final DateTime now = DateTime.now();
+    final DateTime? last = _lastHandledAt;
+    if (last != null && now.difference(last) < _dedupeWindow) return;
+    _lastHandledAt = now;
+
+    // The interceptor has already wiped the stored tokens (that is what fires
+    // this event), so only the in-memory auth state is left to reset. This is
+    // local-only on purpose: the old path called the network logout here, which
+    // — with no token left — was rejected and re-raised this very event.
+    getIt<AuthCubit>().sessionExpired();
 
     final NavigatorState? navigator = getIt<GlobalKey<NavigatorState>>().currentState;
     if (navigator == null) return;

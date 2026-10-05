@@ -180,5 +180,6 @@
       }
     }
   },
-  "totalDuration": "Total time"
+  "totalDuration": "Total time",
+  "weakConnectionRetrying": "Weak connection, retrying..."
 }

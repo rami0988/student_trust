@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 /// / re-sharing.
 class VideoWatermark extends StatefulWidget {
   final String studentName;
+  /// No longer shown: the watermark displays the student's name only. Kept so
+  /// the existing call site doesn't change.
   final String phoneNumber;
 
   const VideoWatermark({super.key, required this.studentName, required this.phoneNumber});
@@ -17,6 +19,21 @@ class VideoWatermark extends StatefulWidget {
 }
 
 class _VideoWatermarkState extends State<VideoWatermark> {
+  /// Subtle on purpose: ~10% white text over a faint shadow stays out of the
+  /// way of teacher notes yet is still legible in a screen recording.
+  ///
+  /// The alpha lives in the colors rather than in an `Opacity` widget: Opacity
+  /// forces an offscreen compositing layer every frame, which is wasteful for
+  /// a label that glides across the video. The shadow is scaled with the text
+  /// so it doesn't turn into a dark smudge at this transparency. Built once,
+  /// so repositioning rebuilds reuse the same style.
+  static final TextStyle _style = TextStyle(
+    color: Colors.white.withValues(alpha: 0.10),
+    fontSize: 14,
+    fontWeight: FontWeight.w300,
+    shadows: [Shadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 6, offset: const Offset(1, 1))],
+  );
+
   Offset _position = const Offset(20, 50);
   Timer? _timer;
   Size _parentSize = const Size(300, 200);
@@ -56,18 +73,7 @@ class _VideoWatermarkState extends State<VideoWatermark> {
                 curve: Curves.easeInOut,
                 left: _position.dx,
                 top: _position.dy,
-                child: Opacity(
-                  opacity: 0.35,
-                  child: Text(
-                    '${widget.studentName} | ${widget.phoneNumber}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 6, offset: Offset(1, 1))],
-                    ),
-                  ),
-                ),
+                child: Text(widget.studentName, style: _style),
               ),
             ],
           ),

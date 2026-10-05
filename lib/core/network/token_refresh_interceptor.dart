@@ -62,8 +62,14 @@ class TokenRefreshInterceptor extends Interceptor {
 
     // A 401 from the refresh/login calls themselves means the credentials are
     // genuinely dead — refreshing again would just recurse.
+    //
+    // Logout is the same kind of terminal call: the session is already ending,
+    // so a 401 there has nothing left to refresh and must NOT be treated as a
+    // fresh expiry. Without this guard, tearing down a dead session (which
+    // calls logout with the tokens already wiped) 401'd, re-fired
+    // SessionExpiredEvent, and called logout again — an endless loop.
     final String path = err.requestOptions.path;
-    if (path.contains(Endpoints.refreshToken) || path.contains(Endpoints.login)) {
+    if (path.contains(Endpoints.refreshToken) || path.contains(Endpoints.login) || path.contains(Endpoints.logout)) {
       return handler.next(err);
     }
 

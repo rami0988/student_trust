@@ -51,6 +51,15 @@ class AuthCubit extends Cubit<AuthState> {
     emit(state.rebuild((b) => b..status = Status.initial..user = null..isAuthResolved = true..failure = null));
   }
 
+  /// Ends the session locally after the server has already ended it (token
+  /// refresh failed, account deactivated). Deliberately makes NO network call:
+  /// the credentials are already wiped, so a logout request would carry no
+  /// token, be rejected, and re-trigger the very expiry handling that called
+  /// this. Use [logout] for a user-initiated sign-out.
+  void sessionExpired() {
+    emit(state.rebuild((b) => b..status = Status.initial..user = null..isAuthResolved = true..failure = null));
+  }
+
   /// Permanently deletes the account. Returns true on success.
   Future<bool> deleteAccount() async {
     final result = await _authRepository.deleteAccount();

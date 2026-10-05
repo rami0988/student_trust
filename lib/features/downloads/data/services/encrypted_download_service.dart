@@ -462,7 +462,8 @@ class EncryptedDownloadService {
     int total;
     FileMode mode;
     if (status == 206) {
-      total = _totalFromContentRange(response.headers) ?? (downloaded + _asInt(response.headers.value('content-length')));
+      total =
+          _totalFromContentRange(response.headers) ?? (downloaded + _asInt(response.headers.value('content-length')));
       // The server may honour Range but serve a *different* file than the one
       // our partial came from. Trust the recorded size over the request.
       final int? knownTotal = partMeta?['total'] as int?;
@@ -594,7 +595,12 @@ class EncryptedDownloadService {
   /// real error — except for 409 VIDEO_PROCESSING, which is a definite answer
   /// ("not encoded yet"), not a probe failure, and is rethrown so the student
   /// is told to wait rather than shown a generic download error.
-  Future<String> _resolveVideoUrl(Dio dio, String videoUrl, Future<String> Function() accessToken, String deviceUuid) async {
+  Future<String> _resolveVideoUrl(
+    Dio dio,
+    String videoUrl,
+    Future<String> Function() accessToken,
+    String deviceUuid,
+  ) async {
     final String token = await accessToken();
     try {
       final Response<dynamic> res = await dio.get<dynamic>(
@@ -646,7 +652,12 @@ class EncryptedDownloadService {
   /// Downloads the lesson thumbnail into the lesson dir (plain jpg — small
   /// and not sensitive). Best effort: any failure just means the offline page
   /// falls back to a placeholder. Returns the local path, or null.
-  Future<String?> _cacheThumbnail(Dio dio, Directory lessonDir, String? thumbnailUrl, Future<String> Function() accessToken) async {
+  Future<String?> _cacheThumbnail(
+    Dio dio,
+    Directory lessonDir,
+    String? thumbnailUrl,
+    Future<String> Function() accessToken,
+  ) async {
     if (thumbnailUrl == null || thumbnailUrl.isEmpty) return null;
     try {
       final String path = '${lessonDir.path}/thumb.jpg';
@@ -654,7 +665,11 @@ class EncryptedDownloadService {
         thumbnailUrl,
         path,
         options: Options(
-          headers: {'Authorization': 'Bearer ${await accessToken()}', 'ngrok-skip-browser-warning': 'true', ...BunnyConstants.cdnHeaders},
+          headers: {
+            'Authorization': 'Bearer ${await accessToken()}',
+            'ngrok-skip-browser-warning': 'true',
+            ...BunnyConstants.cdnHeaders,
+          },
         ),
       );
       return path;
@@ -753,7 +768,11 @@ class EncryptedDownloadService {
 
   // --- Decrypt for playback -------------------------------------------------
 
-  Future<String> getOfflineVideoPath({required String lessonId, required String studentId, required String deviceUuid}) async {
+  Future<String> getOfflineVideoPath({
+    required String lessonId,
+    required String studentId,
+    required String deviceUuid,
+  }) async {
     // Check metadata.
     final Map? meta = _box.get(lessonId) as Map?;
     if (meta == null || meta['isComplete'] != true) {
@@ -778,12 +797,31 @@ class EncryptedDownloadService {
       throw Exception('DOWNLOAD_CORRUPTED');
     }
 
-    // Reuse a recently decrypted temp file if present (< 2 hours old).
+    // Reuse a recently decrypted temp file — but only when it is byte-for-byte
+    // the whole video.
+    //
+    // Age alone is NOT enough, and trusting it is what froze downloaded
+    // lessons mid-playback: the temp file lives in the OS cache directory,
+    // which Android/iOS truncate or partially evict under storage pressure,
+    // and leaving the player deletes it while the native decoder may still
+    // hold it open — so a later visit could find a short file, reuse it, and
+    // the video would play fine until the decoder hit the missing bytes and
+    // stopped dead. `sizeBytes` is the verified plaintext length recorded when
+    // the download completed, so comparing against it catches every one of
+    // those cases; a mismatch just re-decrypts.
     final Directory cacheDir = await getTemporaryDirectory();
     final File tempFile = File('${cacheDir.path}/play_$lessonId.mp4');
+    final int expectedBytes = meta['sizeBytes'] is int ? meta['sizeBytes'] as int : 0;
     if (tempFile.existsSync()) {
       final Duration age = DateTime.now().difference(tempFile.lastModifiedSync());
-      if (age.inHours < 2) return tempFile.path;
+      final int actualBytes = await tempFile.length();
+      if (age.inHours < 2 && expectedBytes > 0 && actualBytes == expectedBytes) {
+        return tempFile.path;
+      }
+      // Stale, truncated or unverifiable — never hand it to the player.
+      try {
+        await tempFile.delete();
+      } catch (_) {}
     }
 
     // Decrypt chunks into the temp file.
@@ -791,7 +829,13 @@ class EncryptedDownloadService {
     final IV iv = _deriveIV(lessonId, studentId);
     final Encrypter encrypter = Encrypter(AES(key, mode: AESMode.cbc));
 
-    final IOSink sink = tempFile.openWrite();
+    // Decrypt to a sibling `.partial` file and rename only once it is complete
+    // and the right length. The player is handed `play_<id>.mp4`, so that name
+    // must never exist in a half-written state — a rename is atomic, an
+    // in-place write is not (an app kill mid-decrypt would leave a short file
+    // that looks finished).
+    final File stagingFile = File('${cacheDir.path}/play_$lessonId.mp4.partial');
+    final IOSink sink = stagingFile.openWrite();
     try {
       for (int i = 0; i < chunkCount; i++) {
         final Uint8List encryptedBytes = await File('${lessonDir.path}/chunk_$i.enc').readAsBytes();
@@ -800,14 +844,23 @@ class EncryptedDownloadService {
       }
       await sink.flush();
       await sink.close();
+
+      // The decrypted plaintext must match the size recorded at download time.
+      // A mismatch means the chunks on disk no longer reconstruct the video
+      // (partial eviction, a truncated chunk that is still non-empty), which
+      // would otherwise surface as a freeze at exactly the damaged offset.
+      final int producedBytes = await stagingFile.length();
+      if (expectedBytes > 0 && producedBytes != expectedBytes) {
+        throw Exception('size mismatch: expected $expectedBytes, got $producedBytes');
+      }
+
+      await stagingFile.rename(tempFile.path);
     } catch (_) {
       try {
         await sink.close();
       } catch (_) {}
-      // A half-written temp file would be picked up by the 2-hour reuse check
-      // above on the next attempt and played as a truncated video.
       try {
-        if (tempFile.existsSync()) await tempFile.delete();
+        if (stagingFile.existsSync()) await stagingFile.delete();
       } catch (_) {}
       // Decryption failing on files that are all present means the bytes
       // themselves are bad.
@@ -923,8 +976,16 @@ class EncryptedDownloadService {
   /// player) so the plaintext video never lingers on disk.
   Future<void> clearTempFile(String lessonId) async {
     final Directory cacheDir = await getTemporaryDirectory();
-    final File tempFile = File('${cacheDir.path}/play_$lessonId.mp4');
-    if (tempFile.existsSync()) tempFile.deleteSync();
+    for (final String name in ['play_$lessonId.mp4', 'play_$lessonId.mp4.partial']) {
+      final File f = File('${cacheDir.path}/$name');
+      try {
+        if (f.existsSync()) await f.delete();
+      } catch (_) {
+        // The native decoder may still hold the file briefly after the player
+        // is torn down. Leaving it is safe: the size check on the next play
+        // refuses to reuse anything that isn't the complete video.
+      }
+    }
   }
 
   bool isDownloaded(String lessonId) {
@@ -952,7 +1013,11 @@ class EncryptedDownloadService {
   /// All completed downloads, newest first — drives the offline page entirely
   /// from local Hive metadata (no network needed).
   List<DownloadedLessonInfo> getDownloadedLessons() {
-    final List<DownloadedLessonInfo> items = _box.values.whereType<Map>().where((m) => m['isComplete'] == true).map(_infoFromMeta).toList();
+    final List<DownloadedLessonInfo> items = _box.values
+        .whereType<Map>()
+        .where((m) => m['isComplete'] == true)
+        .map(_infoFromMeta)
+        .toList();
     items.sort((a, b) {
       final DateTime ad = a.downloadedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
       final DateTime bd = b.downloadedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -966,7 +1031,9 @@ class EncryptedDownloadService {
     return DownloadedLessonInfo(
       lessonId: (meta['lessonId'] ?? '').toString(),
       title: (meta['title'] ?? '').toString(),
-      durationSeconds: meta['durationSeconds'] is int ? meta['durationSeconds'] as int : int.tryParse('${meta['durationSeconds']}') ?? 0,
+      durationSeconds: meta['durationSeconds'] is int
+          ? meta['durationSeconds'] as int
+          : int.tryParse('${meta['durationSeconds']}') ?? 0,
       downloadedAt: DateTime.tryParse('${meta['downloadedAt']}'),
       thumbPath: (thumb == null || thumb.isEmpty) ? null : thumb,
       sizeBytes: meta['sizeBytes'] is int ? meta['sizeBytes'] as int : 0,

@@ -335,6 +335,30 @@ void main() {
       expect(refreshAdapter.refreshCallCount, 0);
     });
 
+    // The regression this pins: a dead session is torn down by calling logout
+    // with the tokens already wiped, the server 401s that, and the interceptor
+    // used to treat the 401 as a brand-new expiry — refresh, fire
+    // SessionExpiredEvent, log out again, forever.
+    test('a 401 from /auth/logout neither refreshes nor raises another SessionExpiredEvent', () async {
+      int events = 0;
+      final StreamSubscription<SessionExpiredEvent> sub = eventBus.on<SessionExpiredEvent>().listen((_) => events++);
+      addTearDown(sub.cancel);
+      storage.store.clear(); // exactly the post-wipe state teardown runs in
+
+      await dio.post<dynamic>(Endpoints.logout).catchError((_) => Response<dynamic>(requestOptions: RequestOptions(path: '/')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(refreshAdapter.refreshCallCount, 0, reason: 'logout must not trigger a refresh');
+      expect(events, 0, reason: 'a failed logout must not re-raise session expiry');
+      expect(apiAdapter.callCount, 1, reason: 'the logout request must not be retried');
+    });
+
+    test('a failed logout leaves stored credentials alone (nothing re-wipes or re-fires)', () async {
+      await dio.post<dynamic>(Endpoints.logout).catchError((_) => Response<dynamic>(requestOptions: RequestOptions(path: '/')));
+
+      expect(storage.store[LocalStorageKeys.refreshToken], 'valid-refresh-token');
+    });
+
     // Guards against an infinite refresh->replay->401->refresh loop when the
     // backend keeps rejecting even a freshly minted token.
     test('a replayed request that 401s again is not retried a second time', () async {

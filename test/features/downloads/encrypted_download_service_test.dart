@@ -601,6 +601,90 @@ void main() {
       expect(service.isDownloaded(lessonId), isFalse);
     });
 
+    // The mid-video freeze: the decrypted temp file lives in the OS cache
+    // directory, which Android/iOS may truncate under storage pressure, and
+    // leaving the player deletes it while the native decoder can still hold it
+    // open. The old reuse check only looked at the file's AGE, so a short file
+    // was handed straight back to the player — which played fine until the
+    // decoder reached the missing bytes and stopped dead, mid-lesson.
+    test('a truncated cached temp file is never reused — it is re-decrypted in full', () async {
+      final Uint8List body = makeBody(300 * 1024);
+      final _FakeVideoServer server = _FakeVideoServer(body);
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+
+      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+      expect(await File(path).length(), body.length);
+
+      // Simulate the OS evicting the tail of the cached file.
+      final File temp = File(path);
+      final Uint8List full = await temp.readAsBytes();
+      await temp.writeAsBytes(Uint8List.sublistView(full, 0, 100 * 1024));
+      expect(await temp.length(), lessThan(body.length));
+
+      final String again = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+
+      expect(await File(again).length(), body.length, reason: 'a short temp file must be rebuilt, not replayed');
+      expect(await File(again).readAsBytes(), equals(body));
+    });
+
+    test('an intact cached temp file IS reused (no pointless re-decrypt)', () async {
+      final Uint8List body = makeBody(200 * 1024);
+      final _FakeVideoServer server = _FakeVideoServer(body);
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+
+      final String first = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+      final DateTime stamp = File(first).lastModifiedSync();
+
+      final String second = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+
+      expect(second, first);
+      expect(File(second).lastModifiedSync(), stamp, reason: 'the same complete file should be handed back as-is');
+    });
+
+    test('decryption leaves no half-written file under the player filename', () async {
+      // The player is handed `play_<id>.mp4`; that name must only ever exist
+      // once the whole video is on disk, so an app kill mid-decrypt cannot
+      // leave something that looks finished.
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(300 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+
+      // Corrupt a chunk's CONTENTS (still non-empty, so the existence check
+      // passes) — decryption then fails or produces the wrong length.
+      final File chunk = File('${tempRoot.path}/edushield_videos/$lessonId/chunk_1.enc');
+      await chunk.writeAsBytes(Uint8List.fromList(List<int>.filled(64, 7)));
+
+      String? produced;
+      try {
+        produced = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+      } catch (_) {
+        produced = null;
+      }
+      // Either it refuses outright, or whatever it hands back must be the
+      // complete video — never a short file the decoder will freeze on.
+      if (produced != null) {
+        expect(await File(produced).length(), 300 * 1024);
+      }
+
+      final Directory cache = Directory('${tempRoot.path}/tmp');
+      final List<String> leftovers = cache
+          .listSync()
+          .whereType<File>()
+          .map((f) => f.uri.pathSegments.last)
+          .where((n) => n.startsWith('play_$lessonId'))
+          .toList();
+      expect(
+        leftovers.where((n) => n.endsWith('.partial')),
+        isEmpty,
+        reason: 'a staging file must never survive a failed decrypt',
+      );
+    });
+
     test('refuses to decrypt with a different device uuid', () async {
       final _FakeVideoServer server = _FakeVideoServer(makeBody(120 * 1024));
       await server.start();

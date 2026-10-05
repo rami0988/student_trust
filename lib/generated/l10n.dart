@@ -1215,6 +1215,16 @@ class S {
       args: [],
     );
   }
+
+  /// `Weak connection, retrying...`
+  String get weakConnectionRetrying {
+    return Intl.message(
+      'Weak connection, retrying...',
+      name: 'weakConnectionRetrying',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
