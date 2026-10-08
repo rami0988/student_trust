@@ -48,10 +48,25 @@ import '../../features/downloads/data/data_sources/downloads_remote_data_source.
     as _i945;
 import '../../features/downloads/data/data_sources/downloads_remote_data_source_impl.dart'
     as _i399;
+import '../../features/downloads/data/local/download_records_store.dart'
+    as _i644;
+import '../../features/downloads/data/local/offline_key_store.dart' as _i149;
 import '../../features/downloads/data/repositories/downloads_repository_impl.dart'
     as _i1072;
+import '../../features/downloads/data/services/background_transfer_client.dart'
+    as _i226;
+import '../../features/downloads/data/services/download_engine.dart' as _i274;
+import '../../features/downloads/data/services/download_engine_module.dart'
+    as _i696;
+import '../../features/downloads/data/services/download_revalidator.dart'
+    as _i1046;
 import '../../features/downloads/data/services/encrypted_download_service.dart'
     as _i503;
+import '../../features/downloads/data/services/native_download_engine.dart'
+    as _i1029;
+import '../../features/downloads/data/services/offline_media_server.dart'
+    as _i468;
+import '../../features/downloads/data/services/storage_guard.dart' as _i988;
 import '../../features/downloads/domain/repositories/downloads_repository.dart'
     as _i1025;
 import '../../features/downloads/presentation/cubit/download_cubit.dart'
@@ -115,6 +130,7 @@ Future<_i174.GetIt> $initGetIt(
 }) async {
   final gh = _i526.GetItHelper(getIt, environment, environmentFilter);
   final registerModule = _$RegisterModule();
+  final downloadEngineModule = _$DownloadEngineModule();
   gh.lazySingleton<_i558.FlutterSecureStorage>(
     () => registerModule.flutterSecureStorage,
   );
@@ -146,9 +162,12 @@ Future<_i174.GetIt> $initGetIt(
   );
   gh.lazySingleton<_i54.RouteTracker>(() => _i54.RouteTracker());
   gh.lazySingleton<_i337.SecurityService>(() => _i337.SecurityService());
-  gh.lazySingleton<_i503.EncryptedDownloadService>(
-    () => _i503.EncryptedDownloadService(),
+  gh.lazySingleton<_i644.DownloadRecordsStore>(
+    () => _i644.DownloadRecordsStore(),
   );
+  gh.lazySingleton<_i149.OfflineKeyStore>(() => _i149.OfflineKeyStore());
+  gh.lazySingleton<_i468.OfflineMediaServer>(() => _i468.OfflineMediaServer());
+  gh.lazySingleton<_i988.StorageGuard>(() => _i988.StorageGuard());
   gh.lazySingleton<_i126.NotificationsHelper>(
     () => _i126.NotificationsHelper(
       gh<_i361.Dio>(),
@@ -183,6 +202,12 @@ Future<_i174.GetIt> $initGetIt(
       gh<_i738.DeviceService>(),
     ),
   );
+  gh.lazySingleton<_i503.EncryptedDownloadService>(
+    () => _i503.EncryptedDownloadService(
+      keyStore: gh<_i149.OfflineKeyStore>(),
+      storageGuard: gh<_i988.StorageGuard>(),
+    ),
+  );
   gh.lazySingleton<_i41.ChaptersRemoteDataSource>(
     () => _i10.ChaptersRemoteDataSourceImpl(gh<_i361.Dio>()),
   );
@@ -205,6 +230,9 @@ Future<_i174.GetIt> $initGetIt(
   gh.lazySingleton<_i170.VideoRemoteDataSource>(
     () => _i488.VideoRemoteDataSourceImpl(gh<_i361.Dio>()),
   );
+  gh.lazySingleton<_i226.BackgroundTransferClient>(
+    () => _i226.FileDownloaderClient(),
+  );
   gh.lazySingleton<_i247.VideoRepository>(
     () => _i606.VideoRepositoryImpl(gh<_i170.VideoRemoteDataSource>()),
   );
@@ -226,6 +254,16 @@ Future<_i174.GetIt> $initGetIt(
   gh.lazySingleton<_i1025.DownloadsRepository>(
     () => _i1072.DownloadsRepositoryImpl(gh<_i945.DownloadsRemoteDataSource>()),
   );
+  gh.lazySingleton<_i1046.DownloadRevalidator>(
+    () => _i1046.DownloadRevalidator(
+      gh<_i503.EncryptedDownloadService>(),
+      gh<_i1025.DownloadsRepository>(),
+      gh<_i47.ConnectivityService>(),
+    ),
+  );
+  gh.lazySingleton<_i274.DartDownloadEngine>(
+    () => _i274.DartDownloadEngine(gh<_i503.EncryptedDownloadService>()),
+  );
   gh.lazySingleton<_i117.AuthCubit>(
     () => _i117.AuthCubit(gh<_i787.AuthRepository>()),
   );
@@ -239,14 +277,30 @@ Future<_i174.GetIt> $initGetIt(
     () =>
         _i488.WorksheetsRepositoryImpl(gh<_i435.WorksheetsRemoteDataSource>()),
   );
+  gh.lazySingleton<_i1029.NativeDownloadEngine>(
+    () => _i1029.NativeDownloadEngine(
+      gh<_i503.EncryptedDownloadService>(),
+      gh<_i226.BackgroundTransferClient>(),
+      gh<_i988.StorageGuard>(),
+      gh<_i644.DownloadRecordsStore>(),
+    ),
+    dispose: (i) => i.dispose(),
+  );
   gh.factory<_i919.ChaptersCubit>(
     () => _i919.ChaptersCubit(gh<_i355.ChaptersRepository>()),
   );
-  gh.lazySingleton<_i723.DownloadCubit>(
-    () => _i723.DownloadCubit(
+  gh.factory<_i517.VideoCubit>(
+    () => _i517.VideoCubit(
+      gh<_i247.VideoRepository>(),
       gh<_i503.EncryptedDownloadService>(),
       gh<_i1025.DownloadsRepository>(),
-      gh<_i738.DeviceService>(),
+      gh<_i468.OfflineMediaServer>(),
+    ),
+  );
+  gh.lazySingleton<_i274.DownloadEngine>(
+    () => downloadEngineModule.downloadEngine(
+      gh<_i274.DartDownloadEngine>(),
+      gh<_i1029.NativeDownloadEngine>(),
     ),
   );
   gh.factory<_i585.WorksheetViewCubit>(
@@ -255,14 +309,20 @@ Future<_i174.GetIt> $initGetIt(
   gh.factory<_i693.WorksheetsCubit>(
     () => _i693.WorksheetsCubit(gh<_i395.WorksheetsRepository>()),
   );
-  gh.factory<_i517.VideoCubit>(
-    () => _i517.VideoCubit(
-      gh<_i247.VideoRepository>(),
+  gh.lazySingleton<_i723.DownloadCubit>(
+    () => _i723.DownloadCubit(
+      gh<_i274.DownloadEngine>(),
       gh<_i503.EncryptedDownloadService>(),
+      gh<_i644.DownloadRecordsStore>(),
       gh<_i1025.DownloadsRepository>(),
+      gh<_i738.DeviceService>(),
+      gh<_i47.ConnectivityService>(),
+      gh<_i1017.EventBus>(),
     ),
   );
   return getIt;
 }
 
 class _$RegisterModule extends _i913.RegisterModule {}
+
+class _$DownloadEngineModule extends _i696.DownloadEngineModule {}

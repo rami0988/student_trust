@@ -118,11 +118,48 @@ Treat these as load-bearing; don't weaken them while refactoring.
   live in `android/app/src/main/kotlin/com/edushield/edushield_student/MainActivity.kt` and
   `ios/Runner/AppDelegate.swift`. `VideoPlayerPage` enables/disables it around playback.
 - **Encrypted downloads** — `EncryptedDownloadService` (`lib/features/downloads/data/services/`)
-  streams video to disk, then writes AES-256-CBC chunks of 2 MB. The key is **derived, never
-  stored**: `sha256("$studentId:$deviceUuid:$lessonId")`, so chunks copied to another device
-  or account are undecryptable. Playback decrypts into a temp file that is deleted on leaving
-  the player. Metadata lives in the Hive box `edushield_downloads`, which enforces a **7-day
-  online re-validation window** (`getOfflineVideoPath` throws `VALIDATION_REQUIRED` past it).
+  streams video to disk, then encrypts it (`offline_crypto.dart`, always in a background
+  isolate). **v2 (current):** AES-256-CTR + HMAC-SHA256 per 1 MiB chunk (`chunk_<i>.v2` =
+  IV | ciphertext | tag; the tag binds lesson id, chunk index and chunk count), with a random
+  per-download key pair in `OfflineKeyStore`. Not AES-GCM on purpose: pure-Dart GCM measured
+  ~1 MiB/s vs ~25 MiB/s. **v1 (legacy, read-only):** AES-256-CBC 2 MB `chunk_<i>.enc` with the
+  derived key `sha256("$studentId:$deviceUuid:$lessonId")` — must stay decryptable forever
+  (metadata without a `format` key = v1). `OfflineKeyStore` uses its OWN secure-storage
+  namespace (`storageNamespace` / keychain `accountName`, device-only): logout wipes the default
+  secure storage via `clearAllSecuredData`, and keys stored there would die with it — never
+  inject the app's default `FlutterSecureStorage` into it.
+- **Offline playback** — `prepareOfflinePlayback` validates the download, then
+  `OfflineMediaServer` streams it from `http://127.0.0.1:<port>/<lesson>.mp4?token=…`, decrypting
+  only the requested range in a long-lived worker isolate (Range/206/416, per-session token,
+  only registered lessons served, stops when nothing plays). **No plaintext file is ever
+  written** — keep the player's disk cache off for this source. Requires the Android
+  `network_security_config.xml` loopback cleartext exception and iOS `NSAllowsLocalNetworking`.
+  A chunk failing its tag mid-playback → `corruptedLessons` → `VideoCubit` drops the download.
+- **Offline lifetime policy** — past a **7-day** revalidation window playback is *locked*
+  (`VALIDATION_REQUIRED`, files kept); past a **30-day** hard cap from download the copy is
+  *purged* (`LICENSE_EXPIRED`). An `ACCOUNT_INACTIVE` response (interceptor fires
+  `AccountDeactivatedEvent`) purges **every** download; a `NOT_SUBSCRIBED` revalidation
+  deletes that lesson. An ordinary session expiry keeps downloads.
+- **Download queue** — every requested download is a persisted `DownloadRecord` (typed Hive
+  box `edushield_download_records`, adapters in `lib/hive/`, type ids pinned in
+  `hive_adapters.g.yaml` — append-only) from request until completion. `DownloadCubit.restore()`
+  rebuilds the queue after an app kill, and `reconcileOnStartup(isTracked:)` must be given the
+  record store so a paused/interrupted partial is resumed rather than deleted as an orphan.
+  Transfers go through the `DownloadEngine` interface. Production Android/iOS use
+  `NativeDownloadEngine` (`background_downloader`: WorkManager foreground service / iOS background
+  `URLSession`) so transfers survive backgrounding and app kills; `DartDownloadEngine` is the
+  fallback (tests, desktop, or `--dart-define=DOWNLOAD_ENGINE=dart`) — see
+  `download_engine_module.dart`. The lesson id IS the native task id: after a kill, `start()`
+  finalizes / attaches to / resumes the native task instead of restarting it. Both engines finish
+  through `EncryptedDownloadService.finalizeTransferredFile` (JSON guard, size gate, encryption).
+  The engine talks to the plugin only via `BackgroundTransferClient` (fakeable in tests).
+  Android needs `FOREGROUND_SERVICE(_DATA_SYNC)` + the `SystemForegroundService` `dataSync`
+  declaration (Play Console FGS declaration too). On iOS the plugin handles background
+  `URLSession` events itself — do NOT add `handleEventsForBackgroundURLSession` to `AppDelegate`.
+- **Proactive revalidation** — `DownloadRevalidator` (started in `main`) batch-checks the library
+  via `POST /student/downloads/validate` at launch and on reconnect (≤ every 15 min): valid →
+  unlocks the 7-day lock, revoked → deleted, 30-day expired → purged locally. Only a definite
+  verdict ever deletes; a failed request changes nothing.
 
 ## Routing and app-level wiring
 

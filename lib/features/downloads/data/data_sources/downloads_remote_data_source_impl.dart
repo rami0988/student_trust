@@ -3,6 +3,7 @@ import 'package:injectable/injectable.dart';
 
 import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/endpoints.dart';
+import '../../domain/entities/download_verdict.dart';
 import 'downloads_remote_data_source.dart';
 
 /// Raw-JSON backend (no envelope) — talks to [Dio] directly instead of
@@ -35,6 +36,28 @@ class DownloadsRemoteDataSourceImpl implements DownloadsRemoteDataSource {
         return data['isValid'] == true;
       }
       return response.statusCode == 200;
+    } catch (error) {
+      throw ErrorHandler.handleExceptionError(error);
+    }
+  }
+
+  @override
+  Future<Map<String, DownloadVerdict>> validateDownloads(List<String> lessonIds) async {
+    try {
+      final Response<dynamic> response = await _dio.post(Endpoints.validateDownloads, data: {'lessonIds': lessonIds});
+      final dynamic results = response.data is Map ? response.data['results'] : null;
+      if (results is! Map) {
+        // No usable answer is NOT "everything is invalid" — the caller must
+        // never delete on a response it couldn't read.
+        throw const FormatException('validateDownloads: response has no results');
+      }
+      final Map<String, DownloadVerdict> verdicts = {};
+      results.forEach((dynamic id, dynamic value) {
+        if (id is String && value is Map && value['isValid'] is bool) {
+          verdicts[id] = DownloadVerdict(isValid: value['isValid'] as bool, reason: value['reason']?.toString());
+        }
+      });
+      return verdicts;
     } catch (error) {
       throw ErrorHandler.handleExceptionError(error);
     }

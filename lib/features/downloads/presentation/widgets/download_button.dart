@@ -8,6 +8,7 @@ import '../../../../generated/l10n.dart';
 import '../../domain/entities/download_item.dart';
 import '../cubit/download_cubit.dart';
 import '../cubit/download_state.dart';
+import 'download_progress_format.dart';
 
 /// A self-contained download control for a single lesson. Reads its state
 /// from the shared (app-level) [DownloadCubit], filtered by [lessonId].
@@ -36,6 +37,7 @@ class DownloadButton extends StatelessWidget {
             case DownloadItemStatus.queued:
               return _ActiveControls(
                 progress: item.progress,
+                detail: DownloadProgressFormat.detail(context, item),
                 state: _ControlsState.queued,
                 onPauseResume: () => cubit.pauseDownload(lessonId),
                 onCancel: () => cubit.cancelDownload(lessonId),
@@ -43,6 +45,7 @@ class DownloadButton extends StatelessWidget {
             case DownloadItemStatus.downloading:
               return _ActiveControls(
                 progress: item.progress,
+                detail: DownloadProgressFormat.detail(context, item),
                 state: _ControlsState.downloading,
                 onPauseResume: () => cubit.pauseDownload(lessonId),
                 onCancel: () => cubit.cancelDownload(lessonId),
@@ -50,8 +53,19 @@ class DownloadButton extends StatelessWidget {
             case DownloadItemStatus.paused:
               return _ActiveControls(
                 progress: item.progress,
+                detail: DownloadProgressFormat.detail(context, item),
                 state: _ControlsState.paused,
                 onPauseResume: () => cubit.resumeDownload(lessonId),
+                onCancel: () => cubit.cancelDownload(lessonId),
+              );
+            case DownloadItemStatus.waitingForNetwork:
+              // Not failed — it resumes by itself when the connection returns.
+              // Tapping pauses it, so it stops waiting until resumed by hand.
+              return _ActiveControls(
+                progress: item.progress,
+                detail: S.of(context).waitingForNetwork,
+                state: _ControlsState.waitingForNetwork,
+                onPauseResume: () => cubit.pauseDownload(lessonId),
                 onCancel: () => cubit.cancelDownload(lessonId),
               );
             case DownloadItemStatus.completed:
@@ -62,6 +76,9 @@ class DownloadButton extends StatelessWidget {
               return _failedButton(context, cubit, item.error);
             case DownloadItemStatus.deleted:
               return _downloadButton(context, cubit);
+            case DownloadItemStatus.expired:
+              // The 30-day copy was purged; offer a fresh download, and say why.
+              return _downloadButton(context, cubit, tooltip: item.error);
           }
         }
 
@@ -74,12 +91,12 @@ class DownloadButton extends StatelessWidget {
     );
   }
 
-  Widget _downloadButton(BuildContext context, DownloadCubit cubit) {
+  Widget _downloadButton(BuildContext context, DownloadCubit cubit, {String? tooltip}) {
     return Semantics(
       button: true,
       label: S.of(context).download,
       child: IconButton(
-        tooltip: S.of(context).download,
+        tooltip: tooltip ?? S.of(context).download,
         icon: const Icon(Icons.download_outlined, color: AppColors.primary),
         onPressed: () =>
             cubit.startDownload(lessonId: lessonId, videoUrl: _videoUrl, title: lessonTitle, durationSeconds: durationSeconds, thumbnailUrl: thumbnailUrl),
@@ -134,27 +151,40 @@ class DownloadButton extends StatelessWidget {
   }
 }
 
-/// Which of the three in-flight shapes the control is showing.
-enum _ControlsState { queued, downloading, paused }
+/// Which of the in-flight shapes the control is showing.
+enum _ControlsState { queued, downloading, paused, waitingForNetwork }
 
 /// Progress ring with a pause/resume tap target, plus a cancel button.
 class _ActiveControls extends StatelessWidget {
   final double progress;
+
+  /// Sizes / speed / time left, shown on long-press so the row stays compact.
+  final String detail;
   final _ControlsState state;
   final VoidCallback onPauseResume;
   final VoidCallback onCancel;
 
-  const _ActiveControls({required this.progress, required this.state, required this.onPauseResume, required this.onCancel});
+  const _ActiveControls({
+    required this.progress,
+    required this.detail,
+    required this.state,
+    required this.onPauseResume,
+    required this.onCancel,
+  });
 
   bool get _paused => state == _ControlsState.paused;
   bool get _queued => state == _ControlsState.queued;
+  bool get _waiting => state == _ControlsState.waitingForNetwork;
 
   @override
   Widget build(BuildContext context) {
-    final Color color = _paused || _queued ? AppColors.textSecondary : AppColors.primary;
-    final String tooltip = _queued
+    final Color color = _paused || _queued || _waiting ? AppColors.textSecondary : AppColors.primary;
+    final String action = _queued
         ? S.of(context).queuedDownload
+        : _waiting
+        ? S.of(context).waitingForNetwork
         : (_paused ? S.of(context).resumeDownload : S.of(context).pauseDownload);
+    final String tooltip = detail.isEmpty || _waiting ? action : '$action\n$detail';
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -178,7 +208,11 @@ class _ActiveControls extends StatelessWidget {
                     color: color,
                   ),
                   Icon(
-                    _queued ? Icons.schedule_rounded : (_paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+                    _queued
+                        ? Icons.schedule_rounded
+                        : _waiting
+                        ? Icons.wifi_off_rounded
+                        : (_paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
                     size: 18,
                     color: color,
                   ),

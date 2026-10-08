@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:injectable/injectable.dart';
 
@@ -7,6 +9,8 @@ import '../../../../core/utils/local_storage_keys.dart';
 import '../../../../core/utils/shared_preferences_helper.dart';
 import '../../../../generated/l10n.dart';
 import '../../../downloads/data/services/encrypted_download_service.dart';
+import '../../../downloads/data/services/offline_crypto.dart';
+import '../../../downloads/data/services/offline_media_server.dart';
 import '../../../downloads/domain/repositories/downloads_repository.dart';
 import '../../domain/entities/video_stream_info.dart';
 import '../../domain/repositories/video_repository.dart';
@@ -17,8 +21,14 @@ class VideoCubit extends Cubit<VideoState> {
   final VideoRepository _videoRepository;
   final EncryptedDownloadService _downloadService;
   final DownloadsRepository _downloadsRepository;
+  final OfflineMediaServer _mediaServer;
 
-  VideoCubit(this._videoRepository, this._downloadService, this._downloadsRepository) : super(VideoState.initial());
+  VideoCubit(this._videoRepository, this._downloadService, this._downloadsRepository, this._mediaServer)
+    : super(VideoState.initial());
+
+  /// The lesson currently registered with [_mediaServer], released on close.
+  String? _servedLessonId;
+  StreamSubscription<String>? _corruptionSub;
 
   VideoState? _lastReady;
 
@@ -118,19 +128,64 @@ class VideoCubit extends Cubit<VideoState> {
     required bool allowRevalidate,
   }) async {
     try {
-      final String path = await _downloadService.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      _emitLocalReady(path, savedPosition: savedPosition);
+      // Stream the encrypted download through the loopback server: playback
+      // starts immediately and seeks freely, and no plaintext copy is written.
+      final OfflinePlaybackSource source = await _downloadService.prepareOfflinePlayback(
+        lessonId: lessonId,
+        studentId: studentId,
+        deviceUuid: deviceUuid,
+      );
+      final Uri url = await _mediaServer.serve(source);
+      _servedLessonId = lessonId;
+      _watchForCorruption(lessonId);
+      _emitLocalReady(url.toString(), savedPosition: savedPosition);
     } catch (error) {
       // The 7-day grace window expired — try a one-off online re-validation.
       // Within the window playback is fully offline and never reaches here.
+      // Past the 30-day hard cap: the service has already purged the files.
+      if (error.toString().contains('LICENSE_EXPIRED')) {
+        emit(
+          state.rebuild(
+            (b) => b
+              ..status = Status.failure
+              ..failure = LicenseExpiredFailure(S.current.downloadExpired),
+          ),
+        );
+        return;
+      }
       if (allowRevalidate && error.toString().contains('VALIDATION_REQUIRED')) {
         bool valid = false;
+        bool revoked = false;
         try {
           final result = await _downloadsRepository.validateDownload(lessonId);
-          valid = result.fold(success: (isValid) => isValid, failure: (_) => false);
+          valid = result.fold(
+            success: (isValid) => isValid,
+            failure: (failure) {
+              // The server definitively said "no longer entitled" — distinct
+              // from simply being offline, which keeps the lesson locked.
+              revoked = failure is NotSubscribedFailure || failure is AccountInactiveFailure;
+              return false;
+            },
+          );
         } catch (_) {
           // No internet: keep valid=false so the clear "connect once"
           // message below is shown instead of a raw network error.
+        }
+        if (revoked) {
+          // Policy: an ended subscription keeps nothing on the device.
+          // (An inactive account is purged wholesale via
+          // AccountDeactivatedEvent; this covers a single lost subject.)
+          try {
+            await _downloadService.deleteLesson(lessonId);
+          } catch (_) {}
+          emit(
+            state.rebuild(
+              (b) => b
+                ..status = Status.failure
+                ..failure = NotSubscribedFailure(S.current.subscriptionEndedDownloadRemoved),
+            ),
+          );
+          return;
         }
         if (valid) {
           await _downloadService.markValidated(lessonId);
@@ -160,7 +215,7 @@ class VideoCubit extends Cubit<VideoState> {
           state.rebuild(
             (b) => b
               ..status = Status.failure
-              ..failure = GeneralFailure(S.current.downloadCorrupted),
+              ..failure = MediaCorruptedFailure(S.current.downloadCorrupted),
           ),
         );
         return;
@@ -169,13 +224,38 @@ class VideoCubit extends Cubit<VideoState> {
     }
   }
 
-  void _emitLocalReady(String path, {required int savedPosition}) {
+  /// A chunk failing its integrity check mid-playback means the download is
+  /// damaged: drop it (so the lesson offers a fresh download) and say so,
+  /// rather than leaving the student on a frozen frame.
+  void _watchForCorruption(String lessonId) {
+    _corruptionSub?.cancel();
+    _corruptionSub = _mediaServer.corruptedLessons.where((id) => id == lessonId).listen((_) async {
+      await _corruptionSub?.cancel();
+      _corruptionSub = null;
+      await _mediaServer.release(lessonId);
+      _servedLessonId = null;
+      try {
+        await _downloadService.markDamaged(lessonId);
+      } catch (_) {}
+      if (isClosed) return;
+      emit(
+        state.rebuild(
+          (b) => b
+            ..status = Status.failure
+            ..failure = MediaCorruptedFailure(S.current.mediaCorrupted),
+        ),
+      );
+    });
+  }
+
+  /// [url] is the loopback media-server address for the downloaded lesson.
+  void _emitLocalReady(String url, {required int savedPosition}) {
     final VideoState next = state.rebuild(
       (b) => b
         ..status = Status.success
         ..isProcessing = false
         ..failure = null
-        ..videoUrl = 'file://$path'
+        ..videoUrl = url
         ..isLocal = true
         ..authToken = null
         ..savedPosition = savedPosition
@@ -198,6 +278,17 @@ class VideoCubit extends Cubit<VideoState> {
           ..failure = GeneralFailure(message),
       ),
     );
+  }
+
+  @override
+  Future<void> close() async {
+    await _corruptionSub?.cancel();
+    final String? served = _servedLessonId;
+    _servedLessonId = null;
+    // Stops serving the lesson; the server shuts down (and its token dies)
+    // once nothing is playing.
+    if (served != null) await _mediaServer.release(served);
+    return super.close();
   }
 
   /// Called when native screen-recording detection fires.

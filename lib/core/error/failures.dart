@@ -94,6 +94,29 @@ class VideoProcessingFailure extends Failure {
   const VideoProcessingFailure([super.statusMessage = 'الفيديو قيد المعالجة\nحاول مرة أخرى بعد قليل', super.statusCode]);
 }
 
+/// The device doesn't have room for the download (checked before starting
+/// and while writing). Freeing space and resuming continues from the partial.
+class InsufficientStorageFailure extends Failure {
+  const InsufficientStorageFailure([super.statusMessage = 'لا توجد مساحة كافية على الجهاز', super.statusCode]);
+}
+
+/// No internet at all — the download is waiting, not failed, and resumes by
+/// itself when the connection returns.
+class NetworkUnavailableFailure extends Failure {
+  const NetworkUnavailableFailure([super.statusMessage = 'بانتظار الاتصال بالإنترنت', super.statusCode]);
+}
+
+/// The offline copy passed its total lifetime (30 days) and was removed.
+class LicenseExpiredFailure extends Failure {
+  const LicenseExpiredFailure([super.statusMessage = 'انتهت صلاحية التنزيل، أعد تنزيل الدرس', super.statusCode]);
+}
+
+/// The downloaded media is damaged (missing, truncated or undecryptable
+/// chunks) and has been removed so it can be downloaded again.
+class MediaCorruptedFailure extends Failure {
+  const MediaCorruptedFailure([super.statusMessage = 'الملف المحمّل تالف، أعد تنزيل الدرس', super.statusCode]);
+}
+
 /// The offline download's 7-day grace window expired and re-validation
 /// failed (or there was no connection to attempt it).
 class ValidationRequiredFailure extends Failure {

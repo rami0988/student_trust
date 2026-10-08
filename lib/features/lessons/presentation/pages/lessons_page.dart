@@ -85,10 +85,12 @@ class _LessonsPageState extends State<LessonsPage> {
               case DownloadItemStatus.failed:
                 showToastMessage(now.error ?? S.of(context).genericError, isError: true);
               case DownloadItemStatus.deleted:
+              case DownloadItemStatus.expired:
                 listChanged = true;
               case DownloadItemStatus.queued:
               case DownloadItemStatus.downloading:
               case DownloadItemStatus.paused:
+              case DownloadItemStatus.waitingForNetwork:
                 break;
             }
           }

@@ -181,5 +181,24 @@
     }
   },
   "totalDuration": "Total time",
-  "weakConnectionRetrying": "Weak connection, retrying..."
+  "weakConnectionRetrying": "Weak connection, retrying...",
+  "insufficientStorage": "Not enough storage — free up space, then resume the download",
+  "waitingForNetwork": "Waiting for network",
+  "downloadExpired": "Download expired after 30 days — download the lesson again",
+  "downloadLocked": "Locked — go online once to verify your subscription",
+  "downloadsInProgress": "In progress",
+  "perSecond": "/s",
+  "timeLeft": "{time} left",
+  "mediaCorrupted": "The downloaded file was damaged and removed — download the lesson again",
+  "subscriptionEndedDownloadRemoved": "Your subscription to this subject ended, so the download was removed",
+  "@timeLeft": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDownloading": "Downloading",
+  "notificationPaused": "Download paused",
+  "notificationFailed": "Download failed — open the app to continue"
 }

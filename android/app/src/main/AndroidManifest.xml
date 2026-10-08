@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Required for all network requests. Without it the app works in debug
          (the debug/profile manifests declare it for the Flutter tool) but every
          request fails in a release build. -->
@@ -10,10 +11,19 @@
          permission is only needed/grantable on older Android versions). -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <!-- Lesson downloads run as a foreground service (background_downloader on
+         WorkManager) so a long lesson isn't cut off by WorkManager's ~9-minute
+         background limit and keeps going with the app backgrounded or killed.
+         Android 14+ requires the typed FOREGROUND_SERVICE_DATA_SYNC permission,
+         and Google Play requires a matching foreground-service declaration in
+         the Play Console. Android 15 caps dataSync services at ~6h per day. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <application
         android:label="ثقة"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -42,6 +52,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- WorkManager's foreground service must declare its type on Android 14+
+             (merged into the declaration WorkManager ships). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -9,6 +9,7 @@ environment:
 
 dependencies:
   app_links: ^7.2.1
+  background_downloader: ^9.5.9
   better_player_plus: ^1.0.8
   bloc: ^9.2.1
   bloc_concurrency: ^0.3.0

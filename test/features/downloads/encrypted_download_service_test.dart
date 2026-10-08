@@ -5,9 +5,15 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+import 'package:mobile_template/features/downloads/data/local/offline_key_store.dart';
 import 'package:mobile_template/features/downloads/data/services/encrypted_download_service.dart';
+import 'package:mobile_template/features/downloads/data/services/offline_crypto.dart';
+import 'package:mobile_template/features/downloads/data/services/storage_guard.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+import '../../helpers/fake_secure_storage.dart';
+import '../../helpers/legacy_v1_fixture.dart';
 
 /// Serves files from a real local HTTP server so the whole Dio stack — range
 /// requests, streaming, timeouts, retries — is exercised end to end. Faking
@@ -126,6 +132,15 @@ class _FakeVideoServer {
 /// to a real loopback server, so the default client has to be put back.
 class _RealHttpOverrides extends HttpOverrides {}
 
+/// Reports a scripted amount of free space instead of asking the platform.
+class _FakeStorageGuard extends StorageGuard {
+  int? free;
+  _FakeStorageGuard(this.free);
+
+  @override
+  Future<int?> freeBytes() async => free;
+}
+
 class _FakePathProvider extends PathProviderPlatform with MockPlatformInterfaceMixin {
   final String root;
   _FakePathProvider(this.root);
@@ -142,6 +157,7 @@ void main() {
 
   late Directory tempRoot;
   late EncryptedDownloadService service;
+  late OfflineKeyStore keyStore;
   late Box box;
 
   const String lessonId = 'lesson-1';
@@ -162,7 +178,8 @@ void main() {
 
     Hive.init('${tempRoot.path}/hive');
     box = await Hive.openBox(EncryptedDownloadService.boxName);
-    service = EncryptedDownloadService();
+    keyStore = OfflineKeyStore.withStorage(FakeSecureStorage());
+    service = EncryptedDownloadService(keyStore: keyStore);
   });
 
   tearDown(() async {
@@ -181,6 +198,22 @@ void main() {
     accessToken: () async => 'token',
     onProgress: (_) {},
   );
+
+  /// Plays the downloaded lesson the way the app does — through
+  /// prepareOfflinePlayback — and returns the decrypted video, so tests can
+  /// check it byte for byte. Nothing is written to disk.
+  Future<Uint8List> playBytes({String id = lessonId, String device = deviceUuid}) async {
+    final OfflinePlaybackSource source = await service.prepareOfflinePlayback(
+      lessonId: id,
+      studentId: studentId,
+      deviceUuid: device,
+    );
+    final BytesBuilder out = BytesBuilder(copy: false);
+    for (int i = 0; i < source.chunkCount; i++) {
+      out.add(decryptSourceChunk(source, i));
+    }
+    return out.takeBytes();
+  }
 
   /// Downloads, pausing as soon as the client reports real progress — i.e.
   /// provably mid-stream, with bytes already written. Deterministic in a way
@@ -223,9 +256,9 @@ void main() {
       addTearDown(server.stop);
 
       await download(server.url);
-      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+      final Uint8List pathBytes = await playBytes();
 
-      expect(await File(path).readAsBytes(), equals(body));
+      expect(pathBytes, equals(body));
     });
 
     test('leaves no .part file or sidecar behind', () async {
@@ -276,8 +309,8 @@ void main() {
       // At least one request resumed from a non-zero offset, i.e. the partial
       // was reused rather than thrown away.
       expect(server.requestedOffsets.where((o) => o > 0), isNotEmpty);
-      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      expect(await File(path).readAsBytes(), equals(body));
+      final Uint8List pathBytes = await playBytes();
+      expect(pathBytes, equals(body));
     }, timeout: const Timeout(Duration(minutes: 2)));
   });
 
@@ -427,8 +460,8 @@ void main() {
       );
 
       // And the bytes are the real video, not a splice of two attempts.
-      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      expect(await File(path).readAsBytes(), equals(body));
+      final Uint8List pathBytes = await playBytes();
+      expect(pathBytes, equals(body));
     }, timeout: const Timeout(Duration(minutes: 2)));
   });
 
@@ -479,8 +512,8 @@ void main() {
         reason: 'the resumed request must ask for bytes=$partial-, not restart',
       );
       // And the result is still byte-exact — resuming must not splice.
-      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      expect(await File(path).readAsBytes(), equals(body));
+      final Uint8List pathBytes = await playBytes();
+      expect(pathBytes, equals(body));
     }, timeout: const Timeout(Duration(minutes: 2)));
 
     test('cancel still removes everything', () async {
@@ -539,8 +572,8 @@ void main() {
       final DownloadOutcome outcome = await download(server.url);
 
       expect(outcome, DownloadOutcome.completed);
-      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      expect(await File(path).readAsBytes(), equals(second));
+      final Uint8List pathBytes = await playBytes();
+      expect(pathBytes, equals(second));
     }, timeout: const Timeout(Duration(minutes: 2)));
 
     test('handles a server that ignores Range and replies 200', () async {
@@ -565,9 +598,9 @@ void main() {
       final DownloadOutcome outcome = await download(server.url);
 
       expect(outcome, DownloadOutcome.completed);
-      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+      final Uint8List pathBytes = await playBytes();
       // Must be exactly the body - not the body appended onto the old partial.
-      expect(await File(path).readAsBytes(), equals(body));
+      expect(pathBytes, equals(body));
     }, timeout: const Timeout(Duration(minutes: 2)));
   });
 
@@ -591,113 +624,28 @@ void main() {
       await download(server.url);
 
       // Simulate a storage cleaner / OS purge removing an encrypted chunk.
-      File('${tempRoot.path}/edushield_videos/$lessonId/chunk_0.enc').deleteSync();
+      File('${tempRoot.path}/edushield_videos/$lessonId/chunk_0.v2').deleteSync();
 
       await expectLater(
-        service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid),
+        service.prepareOfflinePlayback(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid),
         throwsA(predicate((e) => e.toString().contains('DOWNLOAD_CORRUPTED'))),
       );
       // And the unusable entry is dropped so the UI offers a re-download.
       expect(service.isDownloaded(lessonId), isFalse);
     });
 
-    // The mid-video freeze: the decrypted temp file lives in the OS cache
-    // directory, which Android/iOS may truncate under storage pressure, and
-    // leaving the player deletes it while the native decoder can still hold it
-    // open. The old reuse check only looked at the file's AGE, so a short file
-    // was handed straight back to the player — which played fine until the
-    // decoder reached the missing bytes and stopped dead, mid-lesson.
-    test('a truncated cached temp file is never reused — it is re-decrypted in full', () async {
-      final Uint8List body = makeBody(300 * 1024);
-      final _FakeVideoServer server = _FakeVideoServer(body);
-      await server.start();
-      addTearDown(server.stop);
-      await download(server.url);
-
-      final String path = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      expect(await File(path).length(), body.length);
-
-      // Simulate the OS evicting the tail of the cached file.
-      final File temp = File(path);
-      final Uint8List full = await temp.readAsBytes();
-      await temp.writeAsBytes(Uint8List.sublistView(full, 0, 100 * 1024));
-      expect(await temp.length(), lessThan(body.length));
-
-      final String again = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-
-      expect(await File(again).length(), body.length, reason: 'a short temp file must be rebuilt, not replayed');
-      expect(await File(again).readAsBytes(), equals(body));
-    });
-
-    test('an intact cached temp file IS reused (no pointless re-decrypt)', () async {
-      final Uint8List body = makeBody(200 * 1024);
-      final _FakeVideoServer server = _FakeVideoServer(body);
-      await server.start();
-      addTearDown(server.stop);
-      await download(server.url);
-
-      final String first = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      final DateTime stamp = File(first).lastModifiedSync();
-
-      final String second = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-
-      expect(second, first);
-      expect(File(second).lastModifiedSync(), stamp, reason: 'the same complete file should be handed back as-is');
-    });
-
-    test('decryption leaves no half-written file under the player filename', () async {
-      // The player is handed `play_<id>.mp4`; that name must only ever exist
-      // once the whole video is on disk, so an app kill mid-decrypt cannot
-      // leave something that looks finished.
-      final _FakeVideoServer server = _FakeVideoServer(makeBody(300 * 1024));
-      await server.start();
-      addTearDown(server.stop);
-      await download(server.url);
-
-      // Corrupt a chunk's CONTENTS (still non-empty, so the existence check
-      // passes) — decryption then fails or produces the wrong length.
-      final File chunk = File('${tempRoot.path}/edushield_videos/$lessonId/chunk_1.enc');
-      await chunk.writeAsBytes(Uint8List.fromList(List<int>.filled(64, 7)));
-
-      String? produced;
-      try {
-        produced = await service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
-      } catch (_) {
-        produced = null;
-      }
-      // Either it refuses outright, or whatever it hands back must be the
-      // complete video — never a short file the decoder will freeze on.
-      if (produced != null) {
-        expect(await File(produced).length(), 300 * 1024);
-      }
-
-      final Directory cache = Directory('${tempRoot.path}/tmp');
-      final List<String> leftovers = cache
-          .listSync()
-          .whereType<File>()
-          .map((f) => f.uri.pathSegments.last)
-          .where((n) => n.startsWith('play_$lessonId'))
-          .toList();
-      expect(
-        leftovers.where((n) => n.endsWith('.partial')),
-        isEmpty,
-        reason: 'a staging file must never survive a failed decrypt',
-      );
-    });
-
-    test('refuses to decrypt with a different device uuid', () async {
+    test('a v2 download whose key is missing (another phone, a reinstall) refuses to play and is dropped', () async {
+      // v2 keys are random and live in THIS device's keystore (never derived
+      // from ids), so the files alone are useless anywhere the key isn't.
       final _FakeVideoServer server = _FakeVideoServer(makeBody(120 * 1024));
       await server.start();
       addTearDown(server.stop);
-
       await download(server.url);
 
-      // The key is derived from (student, device, lesson) — another device
-      // must not be able to read these chunks.
-      await expectLater(
-        service.getOfflineVideoPath(lessonId: lessonId, studentId: studentId, deviceUuid: 'someone-elses-device'),
-        throwsA(anything),
-      );
+      await keyStore.delete(lessonId);
+
+      await expectLater(playBytes(), throwsA(predicate((e) => e.toString().contains('DOWNLOAD_CORRUPTED'))));
+      expect(service.isDownloaded(lessonId), isFalse, reason: 'an unopenable download is removed so it can be re-fetched');
     });
   });
 
@@ -813,6 +761,428 @@ void main() {
       );
 
       expect(service.totalBytesUsed(), body.length * 2);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Phase 1: persistence-aware startup, offline lifetime, storage, progress.
+  // ---------------------------------------------------------------------------
+
+  group('startup reconciliation keeps resumable downloads', () {
+    // The bug this pins: a paused (or killed) download had no Hive entry, so
+    // the next launch took its folder for an orphan and deleted it — every
+    // interrupted download silently restarted from 0%.
+    test('a partial with a pending record survives startup cleanup', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(400 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      expect(await downloadPausingMidway(server.url), DownloadOutcome.paused);
+      final File part = File('${tempRoot.path}/edushield_videos/$lessonId/video.part');
+      final int before = part.lengthSync();
+
+      await service.reconcileOnStartup(isTracked: (id) => id == lessonId);
+
+      expect(part.existsSync(), isTrue, reason: 'a tracked partial must be kept for the resume');
+      expect(part.lengthSync(), before);
+    });
+
+    test('the same partial WITHOUT a record is still treated as an orphan', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(400 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      expect(await downloadPausingMidway(server.url), DownloadOutcome.paused);
+
+      await service.reconcileOnStartup();
+
+      expect(Directory('${tempRoot.path}/edushield_videos/$lessonId').existsSync(), isFalse);
+    });
+  });
+
+  group('offline lifetime (30-day hard cap, 7-day lock)', () {
+    Future<void> completeDownload() async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(120 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      expect(await download(server.url), DownloadOutcome.completed);
+    }
+
+    Future<void> backdate({int? downloadedDaysAgo, int? validatedDaysAgo}) async {
+      final Map<String, dynamic> meta = Map<String, dynamic>.from(box.get(lessonId) as Map);
+      final DateTime now = DateTime.now();
+      if (downloadedDaysAgo != null) {
+        meta['downloadedAt'] = now.subtract(Duration(days: downloadedDaysAgo)).toIso8601String();
+      }
+      if (validatedDaysAgo != null) {
+        meta['lastValidatedAt'] = now.subtract(Duration(days: validatedDaysAgo)).toIso8601String();
+      }
+      await box.put(lessonId, meta);
+    }
+
+    test('past 30 days the copy is purged at startup and reported as expired', () async {
+      await completeDownload();
+      await backdate(downloadedDaysAgo: 31, validatedDaysAgo: 1);
+
+      await service.reconcileOnStartup();
+
+      expect(service.isDownloaded(lessonId), isFalse);
+      expect(Directory('${tempRoot.path}/edushield_videos/$lessonId').existsSync(), isFalse);
+      expect(service.expiredOnLastReconcile, [lessonId]);
+    });
+
+    test('past 30 days playback refuses with LICENSE_EXPIRED even if recently revalidated', () async {
+      await completeDownload();
+      await backdate(downloadedDaysAgo: 31, validatedDaysAgo: 0);
+
+      await expectLater(
+        service.prepareOfflinePlayback(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid),
+        throwsA(predicate((e) => e.toString().contains('LICENSE_EXPIRED'))),
+      );
+      expect(service.isDownloaded(lessonId), isFalse, reason: 'the expired copy must be removed');
+    });
+
+    test('within 30 days but past the 7-day window: locked, not deleted', () async {
+      await completeDownload();
+      await backdate(downloadedDaysAgo: 10, validatedDaysAgo: 8);
+
+      await expectLater(
+        service.prepareOfflinePlayback(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid),
+        throwsA(predicate((e) => e.toString().contains('VALIDATION_REQUIRED'))),
+      );
+      expect(service.isDownloaded(lessonId), isTrue, reason: 'a lock keeps the files');
+      expect(service.getDownloadedLessons().single.isLocked, isTrue);
+    });
+
+    test('a recently validated download is neither locked nor expired', () async {
+      await completeDownload();
+      await backdate(downloadedDaysAgo: 3, validatedDaysAgo: 1);
+
+      await service.reconcileOnStartup();
+
+      expect(service.isDownloaded(lessonId), isTrue);
+      expect(service.getDownloadedLessons().single.isLocked, isFalse);
+      expect(service.expiredOnLastReconcile, isEmpty);
+    });
+  });
+
+  group('storage guard', () {
+    test('a download that cannot fit is refused before writing anything', () async {
+      service = EncryptedDownloadService(keyStore: keyStore, storageGuard: _FakeStorageGuard(100 * 1024)); // 100 KB free
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(400 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+
+      await expectLater(download(server.url), throwsA(isA<InsufficientStorageException>()));
+      final File part = File('${tempRoot.path}/edushield_videos/$lessonId/video.part');
+      expect(!part.existsSync() || part.lengthSync() == 0, isTrue, reason: 'nothing should be written');
+      expect(service.isDownloaded(lessonId), isFalse);
+    });
+
+    test('running out of space on resume keeps the partial for later', () async {
+      final _FakeStorageGuard guard = _FakeStorageGuard(null); // unknown -> allowed
+      service = EncryptedDownloadService(keyStore: keyStore, storageGuard: guard);
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(400 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      expect(await downloadPausingMidway(server.url), DownloadOutcome.paused);
+      final File part = File('${tempRoot.path}/edushield_videos/$lessonId/video.part');
+      final int kept = part.lengthSync();
+
+      guard.free = 1024; // disk is now nearly full
+      await expectLater(download(server.url), throwsA(isA<InsufficientStorageException>()));
+
+      expect(part.lengthSync(), kept, reason: 'freeing space and resuming must continue, not restart');
+    });
+
+    test('enough space lets the download complete normally', () async {
+      service = EncryptedDownloadService(keyStore: keyStore, storageGuard: _FakeStorageGuard(1024 * 1024 * 1024));
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(200 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+
+      expect(await download(server.url), DownloadOutcome.completed);
+    });
+  });
+
+  group('byte-level progress', () {
+    test('reports bytes received against the advertised total, ending at the full size', () async {
+      final Uint8List body = makeBody(300 * 1024);
+      final _FakeVideoServer server = _FakeVideoServer(body);
+      await server.start();
+      addTearDown(server.stop);
+      final List<int> received = [];
+      int lastTotal = 0;
+
+      await service.downloadLesson(
+        lessonId: lessonId,
+        videoUrl: server.url,
+        studentId: studentId,
+        deviceUuid: deviceUuid,
+        accessToken: () async => 'token',
+        onProgress: (_) {},
+        onBytes: (r, t) {
+          received.add(r);
+          lastTotal = t;
+        },
+      );
+
+      expect(lastTotal, body.length);
+      expect(received.last, body.length);
+      for (int i = 1; i < received.length; i++) {
+        expect(received[i], greaterThanOrEqualTo(received[i - 1]), reason: 'bytes never go backwards within one attempt');
+      }
+    });
+  });
+
+  group('background-isolate crypto', () {
+    test('a multi-batch lesson (more than 8 chunks) encrypts and decrypts byte-exact', () async {
+      // 19 one-MiB v2 chunks = three isolate batches of 8, the last partial —
+      // the batching math must not skip or repeat a chunk.
+      final Uint8List body = makeBody(19 * 1024 * 1024);
+      final _FakeVideoServer server = _FakeVideoServer(body);
+      await server.start();
+      addTearDown(server.stop);
+
+      expect(await download(server.url), DownloadOutcome.completed);
+      expect(box.get(lessonId)['chunkCount'], 19);
+
+      final Uint8List pathBytes = await playBytes();
+      expect(pathBytes, equals(body));
+    }, timeout: const Timeout(Duration(minutes: 2)));
+  });
+
+  group('purge (account deactivated / subscription ended)', () {
+    test('removes completed and partial downloads, metadata and temp files', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(200 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      expect(await download(server.url), DownloadOutcome.completed);
+      // A plaintext temp file left behind by an older app version.
+      File('${tempRoot.path}/tmp/play_$lessonId.mp4').writeAsBytesSync([1, 2, 3]);
+      await service.downloadLesson(
+        lessonId: 'other',
+        videoUrl: server.url,
+        studentId: studentId,
+        deviceUuid: deviceUuid,
+        accessToken: () async => 'token',
+        onProgress: (_) {},
+      );
+
+      expect(await keyStore.read(lessonId), isNotNull);
+
+      await service.purgeEverything();
+
+      expect(await keyStore.read(lessonId), isNull, reason: 'keys go with the content');
+      expect(await keyStore.read('other'), isNull);
+
+      expect(service.getDownloadedLessons(), isEmpty);
+      expect(Directory('${tempRoot.path}/edushield_videos').existsSync(), isFalse);
+      final List<String> leftovers = Directory('${tempRoot.path}/tmp')
+          .listSync()
+          .map((f) => f.uri.pathSegments.where((s) => s.isNotEmpty).last)
+          .where((n) => n.startsWith('play_'))
+          .toList();
+      expect(leftovers, isEmpty, reason: 'no decrypted copy may survive');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Phase 2: v2 encryption at rest, streaming preparation, legacy compatibility.
+  // ---------------------------------------------------------------------------
+
+  group('v2 encryption at rest', () {
+    test('a new download is written as v2: .v2 chunks, format 2, key in the keystore', () async {
+      final Uint8List body = makeBody(3 * 1024 * 1024 + 100);
+      final _FakeVideoServer server = _FakeVideoServer(body);
+      await server.start();
+      addTearDown(server.stop);
+
+      expect(await download(server.url), DownloadOutcome.completed);
+
+      final Directory dir = Directory('${tempRoot.path}/edushield_videos/$lessonId');
+      final List<String> names = dir.listSync().map((f) => f.uri.pathSegments.last).toList();
+      expect(names.where((n) => n.endsWith('.v2')), hasLength(4), reason: '3 MiB + 100 B = 4 one-MiB chunks');
+      expect(names.where((n) => n.endsWith('.enc')), isEmpty, reason: 'nothing is written in the legacy format');
+      expect(box.get(lessonId)['format'], 2);
+      expect(await keyStore.read(lessonId), isNotNull);
+      expect(await playBytes(), equals(body));
+    });
+
+    test('no chunk file contains the plaintext', () async {
+      final Uint8List body = makeBody(200 * 1024);
+      final _FakeVideoServer server = _FakeVideoServer(body);
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+
+      final Uint8List chunk = File('${tempRoot.path}/edushield_videos/$lessonId/chunk_0.v2').readAsBytesSync();
+      final Uint8List probe = Uint8List.sublistView(body, 1000, 1064);
+      bool found = false;
+      for (int i = 0; i + probe.length <= chunk.length && !found; i++) {
+        int j = 0;
+        while (j < probe.length && chunk[i + j] == probe[j]) {
+          j++;
+        }
+        found = j == probe.length;
+      }
+      expect(found, isFalse);
+    });
+
+    test('a re-download gets fresh keys (a key is never reused across passes)', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(100 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+      final List<int> first = (await keyStore.read(lessonId))!.bytes;
+
+      await download(server.url);
+
+      expect((await keyStore.read(lessonId))!.bytes, isNot(equals(first)));
+      expect(await playBytes(), equals(makeBody(100 * 1024)));
+    });
+
+    test('deleting a lesson deletes its key', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(100 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+
+      await service.deleteLesson(lessonId);
+
+      expect(await keyStore.read(lessonId), isNull);
+    });
+  });
+
+  group('playback preparation (no plaintext on disk)', () {
+    test('preparing playback writes no file anywhere', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(300 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+      final Set<String> before = Directory(tempRoot.path).listSync(recursive: true).map((e) => e.path).toSet();
+
+      await service.prepareOfflinePlayback(lessonId: lessonId, studentId: studentId, deviceUuid: deviceUuid);
+
+      final Set<String> after = Directory(tempRoot.path).listSync(recursive: true).map((e) => e.path).toSet();
+      final Set<String> created = after.difference(before).where((p) => !p.contains('${Platform.pathSeparator}hive')).toSet();
+      expect(created, isEmpty, reason: 'playback must not create files (no plaintext temp copy)');
+    });
+
+    test('a truncated v2 chunk is caught before playback starts', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(3 * 1024 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+      final File chunk = File('${tempRoot.path}/edushield_videos/$lessonId/chunk_1.v2');
+      chunk.writeAsBytesSync(chunk.readAsBytesSync().sublist(0, 1000));
+
+      await expectLater(playBytes(), throwsA(predicate((e) => e.toString().contains('DOWNLOAD_CORRUPTED'))));
+      expect(service.isDownloaded(lessonId), isFalse);
+    });
+
+    test('a tampered last chunk is caught before playback starts', () async {
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(150 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+      await download(server.url);
+      final File chunk = File('${tempRoot.path}/edushield_videos/$lessonId/chunk_0.v2');
+      chunk.writeAsBytesSync(chunk.readAsBytesSync()..[50] ^= 0x01);
+
+      await expectLater(playBytes(), throwsA(predicate((e) => e.toString().contains('DOWNLOAD_CORRUPTED'))));
+    });
+
+    test('plaintext temp files left by older app versions are swept at startup', () async {
+      final File legacy = File('${tempRoot.path}/tmp/play_old-lesson.mp4')..writeAsBytesSync([1, 2, 3]);
+      final File staging = File('${tempRoot.path}/tmp/play_old-lesson.mp4.partial')..writeAsBytesSync([4]);
+
+      await service.reconcileOnStartup();
+
+      expect(legacy.existsSync(), isFalse);
+      expect(staging.existsSync(), isFalse);
+    });
+  });
+
+  group('legacy v1 downloads keep playing', () {
+    Future<Uint8List> installLegacy(Uint8List body, {bool recordSize = true}) async {
+      final String dir = '${tempRoot.path}/edushield_videos/$lessonId';
+      final int count = writeLegacyV1Chunks(
+        lessonDirPath: dir,
+        plain: body,
+        studentId: studentId,
+        deviceUuid: deviceUuid,
+        lessonId: lessonId,
+      );
+      await box.put(
+        lessonId,
+        legacyV1Meta(
+          lessonId: lessonId,
+          chunkCount: count,
+          studentId: studentId,
+          deviceUuid: deviceUuid,
+          sizeBytes: recordSize ? body.length : null,
+        ),
+      );
+      return body;
+    }
+
+    test('an old-format download plays back byte-exact with no re-download', () async {
+      final Uint8List body = await installLegacy(makeBody(5 * 1024 * 1024 + 99));
+
+      final OfflinePlaybackSource source = await service.prepareOfflinePlayback(
+        lessonId: lessonId,
+        studentId: studentId,
+        deviceUuid: deviceUuid,
+      );
+
+      expect(source.format, OfflineFormat.v1Cbc);
+      expect(source.totalBytes, body.length);
+      expect(await playBytes(), equals(body));
+    });
+
+    test('the oldest downloads (no recorded size) still play, with the size worked out', () async {
+      final Uint8List body = await installLegacy(makeBody(3 * 1024 * 1024 + 5), recordSize: false);
+
+      final OfflinePlaybackSource source = await service.prepareOfflinePlayback(
+        lessonId: lessonId,
+        studentId: studentId,
+        deviceUuid: deviceUuid,
+      );
+
+      expect(source.totalBytes, body.length);
+      expect(await playBytes(), equals(body));
+    });
+
+    test('legacy downloads survive startup reconciliation', () async {
+      await installLegacy(makeBody(2 * 1024 * 1024 + 10));
+
+      await service.reconcileOnStartup();
+
+      expect(service.isDownloaded(lessonId), isTrue);
+    });
+
+    test('a legacy download still refuses another device id', () async {
+      await installLegacy(makeBody(300 * 1024));
+
+      await expectLater(
+        playBytes(device: 'someone-elses-device'),
+        throwsA(predicate((e) => e.toString().contains('DOWNLOAD_CORRUPTED'))),
+      );
+    });
+
+    test('re-downloading a legacy lesson upgrades it to v2', () async {
+      await installLegacy(makeBody(300 * 1024));
+      final _FakeVideoServer server = _FakeVideoServer(makeBody(400 * 1024));
+      await server.start();
+      addTearDown(server.stop);
+
+      expect(await download(server.url), DownloadOutcome.completed);
+
+      final List<String> names = Directory('${tempRoot.path}/edushield_videos/$lessonId')
+          .listSync()
+          .map((f) => f.uri.pathSegments.last)
+          .toList();
+      expect(names.where((n) => n.endsWith('.enc')), isEmpty, reason: 'old chunks are cleared');
+      expect(box.get(lessonId)['format'], 2);
+      expect(await playBytes(), equals(makeBody(400 * 1024)));
     });
   });
 }

@@ -6,6 +6,7 @@ import 'package:event_bus/event_bus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_template/core/di/di.dart';
+import 'package:mobile_template/core/event_bus/account_deactivated_event.dart';
 import 'package:mobile_template/core/event_bus/session_expired_event.dart';
 import 'package:mobile_template/core/network/endpoints.dart';
 import 'package:mobile_template/core/network/token_refresh_interceptor.dart';
@@ -144,6 +145,27 @@ class _AlwaysUnauthorizedAdapter implements HttpClientAdapter {
   ) async {
     callCount++;
     return ResponseBody.fromString('{"error":"TOKEN_EXPIRED"}', 401);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// Answers every call with a fixed status and backend error code.
+class _CodeAdapter implements HttpClientAdapter {
+  final int status;
+  final String code;
+  _CodeAdapter(this.status, this.code);
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    return ResponseBody.fromString(
+      '{"error":"$code"}',
+      status,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
   }
 
   @override
@@ -323,6 +345,61 @@ void main() {
 
       await expectLater(fired, completes);
       expect(refreshAdapter.refreshCallCount, 0);
+    });
+  });
+
+  // Policy: a deactivated account keeps no downloads. The interceptor is the
+  // one place every API response passes through, so it is where the app first
+  // learns of a deactivation and announces it for the download purge.
+  group('account deactivation', () {
+    Future<int> countDeactivations(Future<void> Function() action) async {
+      int fired = 0;
+      final StreamSubscription<AccountDeactivatedEvent> sub = eventBus.on<AccountDeactivatedEvent>().listen((_) => fired++);
+      addTearDown(sub.cancel);
+      await action();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      return fired;
+    }
+
+    test('a 401 ACCOUNT_INACTIVE from a live request announces the deactivation', () async {
+      dio.httpClientAdapter = _CodeAdapter(401, 'ACCOUNT_INACTIVE');
+      refreshAdapter.refreshSucceeds = false;
+
+      final int fired = await countDeactivations(
+        () => dio.get<dynamic>('/student/subjects').then((_) {}).catchError((_) {}),
+      );
+
+      expect(fired, greaterThanOrEqualTo(1));
+    });
+
+    test('a 403 ACCOUNT_INACTIVE from /auth/refresh announces the deactivation', () async {
+      // The token expired AFTER the lock: the live request 401s generically,
+      // and only the refresh reveals why.
+      final Dio refreshing = Dio(BaseOptions(baseUrl: Endpoints.baseURL))
+        ..httpClientAdapter = apiAdapter
+        ..interceptors.add(
+          TokenRefreshInterceptor(
+            refreshClientFactory: () =>
+                Dio(BaseOptions(baseUrl: Endpoints.baseURL))..httpClientAdapter = _CodeAdapter(403, 'ACCOUNT_INACTIVE'),
+          ),
+        );
+
+      final int fired = await countDeactivations(
+        () => refreshing.get<dynamic>('/student/subjects').then((_) {}).catchError((_) {}),
+      );
+
+      expect(fired, 1);
+    });
+
+    test('an ordinary expired session does NOT announce a deactivation', () async {
+      // Downloads must survive a normal logout — the student still pays.
+      refreshAdapter.refreshSucceeds = false;
+
+      final int fired = await countDeactivations(
+        () => dio.get<dynamic>('/student/subjects').then((_) {}).catchError((_) {}),
+      );
+
+      expect(fired, 0);
     });
   });
 

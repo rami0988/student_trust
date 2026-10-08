@@ -12,6 +12,9 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/network/endpoints.dart';
 import '../../domain/entities/downloaded_lesson_info.dart';
+import '../local/offline_key_store.dart';
+import 'offline_crypto.dart';
+import 'storage_guard.dart';
 
 /// Result of a (possibly interrupted) download attempt.
 enum DownloadOutcome { completed, paused, canceled }
@@ -65,9 +68,30 @@ class VideoProcessingException implements Exception {
 ///    fully on disk.
 @lazySingleton
 class EncryptedDownloadService {
+  /// [storageGuard] is optional so tests can construct the service directly;
+  /// the app gets the DI singleton. [keyStore] is required: a default would
+  /// risk silently writing keys somewhere logout wipes (see OfflineKeyStore).
+  EncryptedDownloadService({required this._keyStore, StorageGuard? storageGuard})
+    : _storageGuard = storageGuard ?? StorageGuard();
+
+  final OfflineKeyStore _keyStore;
+  final StorageGuard _storageGuard;
+
   static const String boxName = 'edushield_downloads';
-  static const int _chunkSize = 2 * 1024 * 1024; // 2 MB
   static const String _partFileName = 'video.part';
+
+  /// Offline lessons must be re-validated online at least this often; past it
+  /// playback is LOCKED (not deleted) until the student reconnects once.
+  static const Duration revalidationWindow = Duration(days: 7);
+
+  /// Hard cap on a download's offline life, counted from when it finished.
+  /// Past it the local copy is PURGED regardless of revalidation.
+  static const Duration maxOfflineLifetime = Duration(days: 30);
+
+  /// Free space is re-checked after every this many bytes written, so a disk
+  /// that fills up mid-download (another app, a camera recording) is caught
+  /// with a clear message instead of a raw I/O failure.
+  static const int _storageRecheckEveryBytes = 32 * 1024 * 1024;
 
   /// Sidecar holding the server fingerprint (total size + ETag) of whatever
   /// the `.part` file is a prefix of. Without it, a resume is a guess.
@@ -145,6 +169,7 @@ class EncryptedDownloadService {
     String title = '',
     int durationSeconds = 0,
     String? thumbnailUrl,
+    void Function(int bytesReceived, int totalBytes)? onBytes,
   }) async {
     final Directory lessonDir = await _getLessonDir(lessonId);
     final File partFile = File('${lessonDir.path}/$_partFileName');
@@ -179,6 +204,7 @@ class EncryptedDownloadService {
         lessonDir: lessonDir,
         token: token,
         onProgress: onProgress,
+        onBytes: onBytes,
       );
 
       // A pause that landed while the transfer was unwinding must not fall
@@ -192,56 +218,19 @@ class EncryptedDownloadService {
         return DownloadOutcome.paused;
       }
 
-      // Guard: if the server replied with JSON (e.g. an error body or an
-      // unresolved bunnycdn envelope), the .part is not a video — storing it
-      // would produce an "unplayable" download. Fail loudly instead.
-      if (await _looksLikeJson(partFile)) {
-        await _discardPartial(lessonDir);
-        throw Exception('Couldn\'t download the video — please try again');
-      }
-
-      // Integrity gate. A dropped stream ends the read loop exactly like a
-      // completed one, so without comparing against the advertised size a
-      // truncated file would be encrypted and marked complete.
-      final int actual = await partFile.length();
-      if (total > 0 && actual != total) {
-        await _discardPartial(lessonDir);
-        throw IncompleteDownloadException(total, actual);
-      }
-
-      // Download finished — encrypt the .part file into AES chunks on disk.
-      final int chunkIndex = await _encryptPartFile(
+      await finalizeTransferredFile(
         lessonId: lessonId,
-        partFile: partFile,
-        lessonDir: lessonDir,
+        expectedTotal: total,
         studentId: studentId,
         deviceUuid: deviceUuid,
+        accessToken: accessToken,
         onProgress: onProgress,
+        title: title,
+        durationSeconds: durationSeconds,
+        thumbnailUrl: thumbnailUrl,
+        dio: dio,
       );
 
-      // Cache the lesson thumbnail next to the chunks (best effort, tiny and
-      // not sensitive) so the offline page can show it without any network.
-      final String? thumbPath = await _cacheThumbnail(dio, lessonDir, thumbnailUrl, accessToken);
-
-      // Save metadata to Hive (display fields included so the offline page can
-      // render a proper list without any network call). `isComplete` is set
-      // only here — after the size check AND the encryption pass — so the flag
-      // can never advertise a file that isn't fully on disk.
-      await _box.put(lessonId, {
-        'lessonId': lessonId,
-        'title': title,
-        'durationSeconds': durationSeconds,
-        'chunkCount': chunkIndex,
-        'sizeBytes': actual,
-        'isComplete': true,
-        'downloadedAt': DateTime.now().toIso8601String(),
-        'studentId': studentId,
-        'deviceUuid': deviceUuid,
-        'lastValidatedAt': DateTime.now().toIso8601String(),
-        'thumbPath': ?thumbPath,
-      });
-
-      onProgress(1.0);
       _tokens.remove(lessonId);
       return DownloadOutcome.completed;
     } on DioException catch (e) {
@@ -256,12 +245,124 @@ class EncryptedDownloadService {
         return DownloadOutcome.paused; // keep the .part for a later resume
       }
       rethrow;
-    } catch (_) {
+    } catch (e) {
       _tokens.remove(lessonId);
       _pausing.remove(lessonId);
       _canceling.remove(lessonId);
+      // A full disk mid-write surfaces as a raw FileSystemException (ENOSPC).
+      // Give it the same typed failure as the pre-flight check so the student
+      // is told to free space, and keep the partial for a resume afterwards.
+      if (StorageGuard.isOutOfSpace(e)) throw const InsufficientStorageException(0, -1);
       rethrow;
     }
+  }
+
+  // --- Shared engine steps ----------------------------------------------------
+  //
+  // Every DownloadEngine moves bytes differently (in-process Dio here, the
+  // OS's background transfer service in NativeDownloadEngine), but they must
+  // all land in the same place and be judged by the same rules. These are the
+  // pieces an engine other than [downloadLesson] needs.
+
+  /// File name a finished transfer must have inside the lesson directory.
+  static const String partFileName = _partFileName;
+
+  /// The lesson's private directory (created if needed).
+  Future<Directory> lessonDirectory(String lessonId) => _getLessonDir(lessonId);
+
+  /// Call before (re)transferring a lesson: a previously complete copy must not
+  /// stay flagged as playable while its files are being replaced.
+  Future<void> beginDownload(String lessonId) => _markIncomplete(lessonId);
+
+  /// Deletes a partial transfer (bytes + resume fingerprint).
+  Future<void> discardPartial(String lessonId) async => _discardPartial(await _getLessonDir(lessonId));
+
+  /// Resolves the backend stream endpoint to the URL the bytes come from (a
+  /// long-lived signed CDN URL in production; the endpoint itself in dev).
+  Future<String> resolveDownloadUrl({
+    required String videoUrl,
+    required Future<String> Function() accessToken,
+    required String deviceUuid,
+  }) {
+    final Dio dio = Dio(BaseOptions(connectTimeout: _connectTimeout, receiveTimeout: _receiveTimeout));
+    return _resolveVideoUrl(dio, videoUrl, accessToken, deviceUuid);
+  }
+
+  /// Turns a fully transferred `video.part` into a verified, encrypted,
+  /// playable download — the single finishing step every engine uses.
+  ///
+  /// Rejects a body that is JSON rather than video, and a file whose length
+  /// differs from [expectedTotal] (when known, > 0) with
+  /// [IncompleteDownloadException] — in both cases the partial is discarded.
+  /// Only after the encryption pass is the lesson marked complete, so the
+  /// metadata never advertises a file that isn't fully on disk.
+  Future<void> finalizeTransferredFile({
+    required String lessonId,
+    required int expectedTotal,
+    required String studentId,
+    required String deviceUuid,
+    required Future<String> Function() accessToken,
+    required void Function(double) onProgress,
+    String title = '',
+    int durationSeconds = 0,
+    String? thumbnailUrl,
+    Dio? dio,
+  }) async {
+    final Directory lessonDir = await _getLessonDir(lessonId);
+    final File partFile = File('${lessonDir.path}/$_partFileName');
+
+    // Guard: if the server replied with JSON (e.g. an error body or an
+    // unresolved bunnycdn envelope), the .part is not a video — storing it
+    // would produce an "unplayable" download. Fail loudly instead.
+    if (await _looksLikeJson(partFile)) {
+      await _discardPartial(lessonDir);
+      throw Exception('Couldn\'t download the video — please try again');
+    }
+
+    // Integrity gate. A dropped stream can end exactly like a completed one,
+    // so without comparing against the advertised size a truncated file would
+    // be encrypted and marked complete.
+    final int actual = await partFile.length();
+    if (expectedTotal > 0 && actual != expectedTotal) {
+      await _discardPartial(lessonDir);
+      throw IncompleteDownloadException(expectedTotal, actual);
+    }
+
+    // Encrypt the .part file into chunks on disk.
+    final int chunkCount = await _encryptPartFile(
+      lessonId: lessonId,
+      partFile: partFile,
+      lessonDir: lessonDir,
+      studentId: studentId,
+      deviceUuid: deviceUuid,
+      onProgress: onProgress,
+    );
+
+    // Cache the lesson thumbnail next to the chunks (best effort, tiny and
+    // not sensitive) so the offline page can show it without any network.
+    final Dio client = dio ?? Dio(BaseOptions(connectTimeout: _connectTimeout, receiveTimeout: _receiveTimeout));
+    final String? thumbPath = await _cacheThumbnail(client, lessonDir, thumbnailUrl, accessToken);
+
+    // Save metadata to Hive (display fields included so the offline page can
+    // render a proper list without any network call). `isComplete` is set
+    // only here — after the size check AND the encryption pass.
+    await _box.put(lessonId, {
+      'lessonId': lessonId,
+      'title': title,
+      'durationSeconds': durationSeconds,
+      'chunkCount': chunkCount,
+      // Absent on older downloads = v1 (CBC). New downloads are always v2.
+      'format': 2,
+      'sizeBytes': actual,
+      'isComplete': true,
+      'downloadedAt': DateTime.now().toIso8601String(),
+      'studentId': studentId,
+      'deviceUuid': deviceUuid,
+      'lastValidatedAt': DateTime.now().toIso8601String(),
+      'thumbPath': ?thumbPath,
+    });
+
+    onProgress(1.0);
   }
 
   /// Runs the byte transfer, retrying transient failures with backoff.
@@ -292,6 +393,7 @@ class EncryptedDownloadService {
     required Directory lessonDir,
     required CancelToken token,
     required void Function(double) onProgress,
+    void Function(int, int)? onBytes,
   }) async {
     Object? lastError;
     String? url;
@@ -317,6 +419,7 @@ class EncryptedDownloadService {
           lessonDir: lessonDir,
           token: token,
           onProgress: onProgress,
+          onBytes: onBytes,
         );
       } on VideoProcessingException {
         // Not a transfer failure at all — the video isn't encoded yet. Retrying
@@ -397,6 +500,7 @@ class EncryptedDownloadService {
     required Directory lessonDir,
     required CancelToken token,
     required void Function(double) onProgress,
+    void Function(int, int)? onBytes,
   }) async {
     int downloaded = partFile.existsSync() ? await partFile.length() : 0;
 
@@ -488,13 +592,26 @@ class EncryptedDownloadService {
     // crash mid-transfer must not leave bytes with no fingerprint.
     await _writePartMeta(lessonDir, total: total, etag: etag);
 
+    // Pre-flight: the first moment the real size is known. Refuse up front
+    // rather than fill the disk and fail at 90%. Not retried by the ladder
+    // (another attempt can't make room); the partial is kept for later.
+    await _storageGuard.ensureCanFit(totalBytes: total, alreadyOnDisk: downloaded);
+    onBytes?.call(downloaded, total);
+
     IOSink? sink = partFile.openWrite(mode: mode);
+    int sinceStorageCheck = 0;
     try {
       await for (final Uint8List chunk in response.data!.stream) {
         sink.add(chunk);
         downloaded += chunk.length;
+        sinceStorageCheck += chunk.length;
+        onBytes?.call(downloaded, total);
         if (total > 0) {
           onProgress((downloaded / total * 0.85).clamp(0.0, 0.85));
+        }
+        if (sinceStorageCheck >= _storageRecheckEveryBytes) {
+          sinceStorageCheck = 0;
+          await _storageGuard.ensureCanFit(totalBytes: total, alreadyOnDisk: downloaded);
         }
       }
       // flush() before close() so the on-disk length is truthful even when the
@@ -703,35 +820,44 @@ class EncryptedDownloadService {
     required String deviceUuid,
     required void Function(double) onProgress,
   }) async {
-    final Key key = _deriveKey(studentId, deviceUuid, lessonId);
-    final IV iv = _deriveIV(lessonId, studentId);
-    final Encrypter encrypter = Encrypter(AES(key, mode: AESMode.cbc));
+    // Fresh random keys for EVERY encryption pass. A retried pass must never
+    // reuse a key: v2 nonces are random, but a new key makes nonce reuse
+    // impossible to reason about at all. The keys are stored BEFORE any chunk
+    // is written, so no chunk can ever exist without the key that opens it.
+    final OfflineKeyMaterial keys = OfflineKeyMaterial.generate();
+    await _keyStore.write(lessonId, keys);
 
-    // Clear any stale chunks from a previous (interrupted) attempt.
+    // Clear any stale chunks (v1 or v2) from a previous attempt or download.
     for (final FileSystemEntity f in lessonDir.listSync()) {
-      if (f is File && f.path.endsWith('.enc')) f.deleteSync();
+      if (f is File && (f.path.endsWith('.enc') || f.path.endsWith('.v2'))) f.deleteSync();
     }
 
+    // The CPU-heavy work runs in a background isolate (see offline_crypto.dart)
+    // — on the UI isolate it froze the app at the end of every download.
+    // Batched so progress still moves.
+    const int chunksPerBatch = 8;
     final int length = await partFile.length();
-    final RandomAccessFile raf = await partFile.open();
-    int index = 0;
-    int pos = 0;
-    try {
-      while (pos < length) {
-        final int size = (pos + _chunkSize < length) ? _chunkSize : length - pos;
-        final Uint8List bytes = await raf.read(size);
-        final Encrypted encrypted = encrypter.encryptBytes(bytes, iv: iv);
-        await File('${lessonDir.path}/chunk_$index.enc').writeAsBytes(encrypted.bytes);
-        index++;
-        pos += size;
-        onProgress((0.85 + (pos / length) * 0.15).clamp(0.85, 1.0));
-      }
-    } finally {
-      await raf.close();
+    final int total = chunkCountFor(length, v2ChunkSize);
+    final Uint8List keyBytes = keys.bytes;
+    int consumed = 0;
+    for (int first = 0; first < total; first += chunksPerBatch) {
+      final int end = (first + chunksPerBatch < total) ? first + chunksPerBatch : total;
+      consumed += await encryptBatchV2InBackground(
+        EncryptBatchV2(
+          partPath: partFile.path,
+          lessonDirPath: lessonDir.path,
+          lessonId: lessonId,
+          keyBytes: keyBytes,
+          firstChunk: first,
+          endChunk: end,
+          chunkCount: total,
+        ),
+      );
+      onProgress((0.85 + (consumed / length) * 0.15).clamp(0.85, 1.0));
     }
     // The partial is fully consumed — drop it and its now-meaningless sidecar.
     await _discardPartial(lessonDir);
-    return index;
+    return total;
   }
 
   int? _totalFromContentRange(Headers headers) {
@@ -768,116 +894,129 @@ class EncryptedDownloadService {
 
   // --- Decrypt for playback -------------------------------------------------
 
-  Future<String> getOfflineVideoPath({
+  /// Checks that a downloaded lesson may be played and is intact, and returns
+  /// everything the offline media server needs to stream it.
+  ///
+  /// No plaintext is written anywhere: the server decrypts only the chunks the
+  /// player asks for, in memory. (The previous design decrypted the whole
+  /// lesson into a temp file first — a long wait before playback, and a full
+  /// unencrypted copy on disk while it played.)
+  ///
+  /// Throws `Exception` with one of: `LICENSE_EXPIRED` (past the 30-day cap,
+  /// files purged), `VALIDATION_REQUIRED` (past the 7-day window, files kept),
+  /// `DOWNLOAD_CORRUPTED` (chunks missing/damaged or key lost — removed so the
+  /// lesson can be downloaded again).
+  Future<OfflinePlaybackSource> prepareOfflinePlayback({
     required String lessonId,
     required String studentId,
     required String deviceUuid,
   }) async {
-    // Check metadata.
     final Map? meta = _box.get(lessonId) as Map?;
     if (meta == null || meta['isComplete'] != true) {
       throw Exception('Lesson not downloaded');
     }
 
-    // Check 7-day validation window.
+    // Hard cap first: past the total offline lifetime the copy is purged no
+    // matter how recently it was revalidated.
+    if (isPastOfflineLifetime(meta)) {
+      await deleteLesson(lessonId);
+      throw Exception('LICENSE_EXPIRED');
+    }
+
     final DateTime lastValidated = DateTime.parse(meta['lastValidatedAt'] as String);
-    if (DateTime.now().difference(lastValidated).inDays > 7) {
+    if (DateTime.now().difference(lastValidated).inDays > revalidationWindow.inDays) {
       throw Exception('VALIDATION_REQUIRED'); // caller tries online validation
     }
 
     final Directory lessonDir = await _getLessonDir(lessonId);
+    final OfflineFormat format = _formatOf(meta);
     final int chunkCount = meta['chunkCount'] as int;
+    final int recordedSize = meta['sizeBytes'] is int ? meta['sizeBytes'] as int : 0;
 
-    // Verify every chunk is still on disk before decrypting. A storage
-    // cleaner, an OS purge, or a failed re-download can remove files behind
-    // our back; catching it here turns an opaque mid-playback crash into a
-    // clear "this download is damaged, get it again".
-    if (!await _chunksIntact(lessonDir, chunkCount)) {
+    // Every chunk must be on disk at exactly the size its format implies. A
+    // storage cleaner, an OS purge, or a truncated write would otherwise show
+    // up as a freeze mid-lesson; here it becomes a clear "download again".
+    if (!await _chunksIntact(lessonDir, chunkCount, format, plainSize: recordedSize)) {
       await markDamaged(lessonId);
       throw Exception('DOWNLOAD_CORRUPTED');
     }
 
-    // Reuse a recently decrypted temp file — but only when it is byte-for-byte
-    // the whole video.
-    //
-    // Age alone is NOT enough, and trusting it is what froze downloaded
-    // lessons mid-playback: the temp file lives in the OS cache directory,
-    // which Android/iOS truncate or partially evict under storage pressure,
-    // and leaving the player deletes it while the native decoder may still
-    // hold it open — so a later visit could find a short file, reuse it, and
-    // the video would play fine until the decoder hit the missing bytes and
-    // stopped dead. `sizeBytes` is the verified plaintext length recorded when
-    // the download completed, so comparing against it catches every one of
-    // those cases; a mismatch just re-decrypts.
-    final Directory cacheDir = await getTemporaryDirectory();
-    final File tempFile = File('${cacheDir.path}/play_$lessonId.mp4');
-    final int expectedBytes = meta['sizeBytes'] is int ? meta['sizeBytes'] as int : 0;
-    if (tempFile.existsSync()) {
-      final Duration age = DateTime.now().difference(tempFile.lastModifiedSync());
-      final int actualBytes = await tempFile.length();
-      if (age.inHours < 2 && expectedBytes > 0 && actualBytes == expectedBytes) {
-        return tempFile.path;
+    final Uint8List keyBytes;
+    Uint8List? v1Iv;
+    if (format == OfflineFormat.v2CtrHmac) {
+      final OfflineKeyMaterial? keys = await _keyStore.read(lessonId);
+      if (keys == null) {
+        // Key gone (e.g. app reinstalled, keystore reset): the chunks can never
+        // be opened again.
+        await markDamaged(lessonId);
+        throw Exception('DOWNLOAD_CORRUPTED');
       }
-      // Stale, truncated or unverifiable — never hand it to the player.
-      try {
-        await tempFile.delete();
-      } catch (_) {}
+      keyBytes = keys.bytes;
+    } else {
+      keyBytes = Uint8List.fromList(_deriveKey(studentId, deviceUuid, lessonId).bytes);
+      v1Iv = Uint8List.fromList(_deriveIV(lessonId, studentId).bytes);
     }
 
-    // Decrypt chunks into the temp file.
-    final Key key = _deriveKey(studentId, deviceUuid, lessonId);
-    final IV iv = _deriveIV(lessonId, studentId);
-    final Encrypter encrypter = Encrypter(AES(key, mode: AESMode.cbc));
+    OfflinePlaybackSource source = OfflinePlaybackSource(
+      lessonId: lessonId,
+      format: format,
+      lessonDirPath: lessonDir.path,
+      chunkCount: chunkCount,
+      totalBytes: recordedSize,
+      keyBytes: keyBytes,
+      v1Iv: v1Iv,
+    );
 
-    // Decrypt to a sibling `.partial` file and rename only once it is complete
-    // and the right length. The player is handed `play_<id>.mp4`, so that name
-    // must never exist in a half-written state — a rename is atomic, an
-    // in-place write is not (an app kill mid-decrypt would leave a short file
-    // that looks finished).
-    final File stagingFile = File('${cacheDir.path}/play_$lessonId.mp4.partial');
-    final IOSink sink = stagingFile.openWrite();
+    // Open the last chunk once before handing the source to the player: it
+    // proves the key is right (a different device/student can't open v1; a
+    // tampered v2 chunk fails its tag) and gives the exact size for legacy
+    // downloads that never recorded one.
     try {
-      for (int i = 0; i < chunkCount; i++) {
-        final Uint8List encryptedBytes = await File('${lessonDir.path}/chunk_$i.enc').readAsBytes();
-        final List<int> decrypted = encrypter.decryptBytes(Encrypted(encryptedBytes), iv: iv);
-        sink.add(decrypted);
+      final Uint8List last = await decryptSourceChunkInBackground(source, chunkCount - 1);
+      final int exactSize = (chunkCount - 1) * source.plainChunkSize + last.length;
+      if (recordedSize > 0 && exactSize != recordedSize) throw StateError('size mismatch');
+      if (recordedSize == 0) {
+        source = OfflinePlaybackSource(
+          lessonId: lessonId,
+          format: format,
+          lessonDirPath: lessonDir.path,
+          chunkCount: chunkCount,
+          totalBytes: exactSize,
+          keyBytes: keyBytes,
+          v1Iv: v1Iv,
+        );
       }
-      await sink.flush();
-      await sink.close();
-
-      // The decrypted plaintext must match the size recorded at download time.
-      // A mismatch means the chunks on disk no longer reconstruct the video
-      // (partial eviction, a truncated chunk that is still non-empty), which
-      // would otherwise surface as a freeze at exactly the damaged offset.
-      final int producedBytes = await stagingFile.length();
-      if (expectedBytes > 0 && producedBytes != expectedBytes) {
-        throw Exception('size mismatch: expected $expectedBytes, got $producedBytes');
-      }
-
-      await stagingFile.rename(tempFile.path);
     } catch (_) {
-      try {
-        await sink.close();
-      } catch (_) {}
-      try {
-        if (stagingFile.existsSync()) await stagingFile.delete();
-      } catch (_) {}
-      // Decryption failing on files that are all present means the bytes
-      // themselves are bad.
       await markDamaged(lessonId);
       throw Exception('DOWNLOAD_CORRUPTED');
     }
-
-    return tempFile.path;
+    return source;
   }
 
-  /// True when chunk_0..chunk_[count-1] all exist and are non-empty.
-  Future<bool> _chunksIntact(Directory lessonDir, int count) async {
+  OfflineFormat _formatOf(Map meta) => meta['format'] == 2 ? OfflineFormat.v2CtrHmac : OfflineFormat.v1Cbc;
+
+  /// True when every chunk of a [count]-chunk download exists at a size its
+  /// [format] allows. With the plaintext size known ([plainSize] > 0) every
+  /// chunk's length is exact, so a truncated chunk is caught here; otherwise
+  /// only full chunks are checked exactly and the last must be non-empty.
+  Future<bool> _chunksIntact(Directory lessonDir, int count, OfflineFormat format, {int plainSize = 0}) async {
     if (count <= 0) return false;
+    final bool v2 = format == OfflineFormat.v2CtrHmac;
+    final int chunkPlain = v2 ? v2ChunkSize : v1ChunkSize;
+    // v2 adds IV + tag; v1 (CBC/PKCS7) pads a full 2 MiB chunk by one block.
+    int sealedSize(int plain) => v2 ? plain + v2ChunkOverhead : (plain ~/ 16 + 1) * 16;
+
     for (int i = 0; i < count; i++) {
-      final File f = File('${lessonDir.path}/chunk_$i.enc');
+      final File f = File(v2 ? v2ChunkPath(lessonDir.path, i) : v1ChunkPath(lessonDir.path, i));
       if (!f.existsSync()) return false;
-      if (await f.length() == 0) return false;
+      final int length = await f.length();
+      if (length == 0) return false;
+      final bool isLast = i == count - 1;
+      if (!isLast && length != sealedSize(chunkPlain)) return false;
+      if (isLast && plainSize > 0) {
+        final int lastPlain = plainSize - (count - 1) * chunkPlain;
+        if (lastPlain <= 0 || lastPlain > chunkPlain || length != sealedSize(lastPlain)) return false;
+      }
     }
     return true;
   }
@@ -885,6 +1024,25 @@ class EncryptedDownloadService {
   // --- Maintenance ----------------------------------------------------------
 
   /// Marks the lesson as re-validated (called after a successful online check).
+  /// Deletes every completed download past [maxOfflineLifetime] and returns
+  /// their ids. Purely local — the 30-day cap applies with or without a
+  /// connection, and while the app stays open for days (startup cleanup alone
+  /// would only catch it on the next launch).
+  Future<List<String>> purgeExpired() async {
+    final List<String> expired = [];
+    for (final dynamic value in _box.values.toList()) {
+      if (value is! Map || value['isComplete'] != true) continue;
+      if (!isPastOfflineLifetime(value)) continue;
+      final String lessonId = (value['lessonId'] ?? '').toString();
+      if (lessonId.isEmpty) continue;
+      try {
+        await deleteLesson(lessonId);
+        expired.add(lessonId);
+      } catch (_) {}
+    }
+    return expired;
+  }
+
   Future<void> markValidated(String lessonId) async {
     final Map? meta = _box.get(lessonId) as Map?;
     if (meta == null) return;
@@ -897,19 +1055,30 @@ class EncryptedDownloadService {
   /// offering it as playable and shows the download action again.
   Future<void> markDamaged(String lessonId) => deleteLesson(lessonId);
 
-  /// Reclaims disk from an interrupted session and repairs inconsistent
-  /// metadata. Called once at startup, before any screen reads the store.
+  /// Reclaims disk from an interrupted session, repairs inconsistent
+  /// metadata, and enforces the offline lifetime. Called once at startup,
+  /// before any screen reads the store.
   ///
-  /// Covers the three states an app kill can leave behind:
-  ///  * metadata says complete but the chunks are gone/empty → drop it, so it
-  ///    isn't offered for playback and then fails;
-  ///  * metadata says incomplete (killed mid-download) → drop the entry and
-  ///    its partial, so the lesson simply shows as not-downloaded;
-  ///  * a lesson directory on disk with no metadata at all (killed before the
-  ///    first Hive write) → delete the orphaned bytes.
+  /// [isTracked] says whether a lesson still has a pending download record
+  /// (see `DownloadRecordsStore`). A tracked lesson's partial is KEPT so the
+  /// download resumes where it stopped; before records existed, an app kill
+  /// made its folder look orphaned and it was deleted, so every interrupted
+  /// download restarted from 0%.
   ///
-  /// Returns how many entries were repaired.
-  Future<int> reconcileOnStartup() async {
+  /// Handles:
+  ///  * complete, but past [maxOfflineLifetime] → purged (see
+  ///    [expiredOnLastReconcile]);
+  ///  * complete, but chunks gone/empty → dropped, so it isn't offered for
+  ///    playback and then fails;
+  ///  * incomplete and untracked → dropped (nothing will ever resume it);
+  ///  * a lesson folder with no metadata and no record → orphaned bytes,
+  ///    deleted.
+  ///
+  /// Returns how many entries were removed.
+  Future<int> reconcileOnStartup({bool Function(String lessonId)? isTracked}) async {
+    bool tracked(String lessonId) => isTracked?.call(lessonId) ?? false;
+    _expiredOnLastReconcile = <String>[];
+
     // 1. Metadata-driven pass.
     final List<String> damaged = [];
     for (final dynamic value in _box.values.toList()) {
@@ -918,12 +1087,19 @@ class EncryptedDownloadService {
       if (lessonId.isEmpty) continue;
 
       if (value['isComplete'] != true) {
-        damaged.add(lessonId); // interrupted mid-download
+        // Interrupted mid-(re)download: resumable when a record still wants it.
+        if (!tracked(lessonId)) damaged.add(lessonId);
+        continue;
+      }
+      if (isPastOfflineLifetime(value)) {
+        _expiredOnLastReconcile.add(lessonId);
+        damaged.add(lessonId);
         continue;
       }
       final Directory dir = await _getLessonDir(lessonId);
       final int chunkCount = value['chunkCount'] is int ? value['chunkCount'] as int : 0;
-      if (!await _chunksIntact(dir, chunkCount)) damaged.add(lessonId);
+      final int plainSize = value['sizeBytes'] is int ? value['sizeBytes'] as int : 0;
+      if (!await _chunksIntact(dir, chunkCount, _formatOf(value), plainSize: plainSize)) damaged.add(lessonId);
     }
     for (final String lessonId in damaged) {
       try {
@@ -931,7 +1107,11 @@ class EncryptedDownloadService {
       } catch (_) {}
     }
 
-    // 2. Orphaned directories with no Hive entry at all.
+    // Older app versions decrypted whole lessons into `play_*.mp4` temp
+    // files. Playback no longer creates them; remove any that are left.
+    await _deleteLegacyTempFiles();
+
+    // 2. Directories with neither metadata nor a pending record.
     try {
       final Directory appDir = await getApplicationDocumentsDirectory();
       final Directory root = Directory('${appDir.path}/edushield_videos');
@@ -939,7 +1119,7 @@ class EncryptedDownloadService {
       for (final FileSystemEntity entity in root.listSync()) {
         if (entity is! Directory) continue;
         final String lessonId = entity.uri.pathSegments.where((s) => s.isNotEmpty).last;
-        if (_box.get(lessonId) != null) continue;
+        if (_box.get(lessonId) != null || tracked(lessonId)) continue;
         try {
           entity.deleteSync(recursive: true);
         } catch (_) {}
@@ -950,15 +1130,73 @@ class EncryptedDownloadService {
     return damaged.length;
   }
 
+  List<String> _expiredOnLastReconcile = <String>[];
+
+  /// Lessons the last [reconcileOnStartup] purged for exceeding
+  /// [maxOfflineLifetime] — so the UI can say "expired" rather than having
+  /// them silently vanish.
+  List<String> get expiredOnLastReconcile => List<String>.unmodifiable(_expiredOnLastReconcile);
+
+  /// True when a completed download's [maxOfflineLifetime] has run out.
+  /// Unknown dates count as not expired: an old entry without a timestamp is
+  /// still subject to the 7-day revalidation lock.
+  bool isPastOfflineLifetime(Map meta) {
+    final DateTime? downloadedAt = DateTime.tryParse('${meta['downloadedAt']}');
+    if (downloadedAt == null) return false;
+    return DateTime.now().difference(downloadedAt) > maxOfflineLifetime;
+  }
+
+  /// True when a completed download is past the [revalidationWindow] and
+  /// cannot be played until it is validated online once.
+  bool _needsRevalidation(Map meta) {
+    final DateTime? lastValidated = DateTime.tryParse('${meta['lastValidatedAt']}');
+    if (lastValidated == null) return false;
+    return DateTime.now().difference(lastValidated).inDays > revalidationWindow.inDays;
+  }
+
+  /// Removes EVERY downloaded and partially downloaded lesson, its metadata
+  /// and any decrypted temp file. Used when the account is deactivated or the
+  /// subscription ends: the content must not stay on the device.
+  Future<void> purgeEverything() async {
+    for (final String id in _tokens.keys.toList()) {
+      cancel(id);
+    }
+    try {
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final Directory root = Directory('${appDir.path}/edushield_videos');
+      if (root.existsSync()) await root.delete(recursive: true);
+    } catch (_) {}
+    await _deleteLegacyTempFiles();
+    try {
+      await _keyStore.deleteAll();
+    } catch (_) {}
+    await _box.clear();
+  }
+
+  /// Removes `play_*` plaintext temp files written by older app versions.
+  Future<void> _deleteLegacyTempFiles() async {
+    try {
+      final Directory cacheDir = await getTemporaryDirectory();
+      if (!cacheDir.existsSync()) return;
+      for (final FileSystemEntity f in cacheDir.listSync()) {
+        final String name = f.uri.pathSegments.where((s) => s.isNotEmpty).last;
+        if (f is File && name.startsWith('play_')) {
+          try {
+            await f.delete();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> deleteLesson(String lessonId) async {
     final Directory lessonDir = await _getLessonDir(lessonId);
     if (lessonDir.existsSync()) lessonDir.deleteSync(recursive: true);
     await _box.delete(lessonId);
-
-    // Also drop any leftover decrypted temp file.
-    final Directory cacheDir = await getTemporaryDirectory();
-    final File tempFile = File('${cacheDir.path}/play_$lessonId.mp4');
-    if (tempFile.existsSync()) tempFile.deleteSync();
+    // Without its key a v2 chunk is just noise; never leave one behind.
+    try {
+      await _keyStore.delete(lessonId);
+    } catch (_) {}
   }
 
   /// Deletes every downloaded lesson. Returns how many were removed.
@@ -970,22 +1208,6 @@ class EncryptedDownloadService {
       } catch (_) {}
     }
     return ids.length;
-  }
-
-  /// Deletes the decrypted temp file for a lesson (called when leaving the
-  /// player) so the plaintext video never lingers on disk.
-  Future<void> clearTempFile(String lessonId) async {
-    final Directory cacheDir = await getTemporaryDirectory();
-    for (final String name in ['play_$lessonId.mp4', 'play_$lessonId.mp4.partial']) {
-      final File f = File('${cacheDir.path}/$name');
-      try {
-        if (f.existsSync()) await f.delete();
-      } catch (_) {
-        // The native decoder may still hold the file briefly after the player
-        // is torn down. Leaving it is safe: the size check on the next play
-        // refuses to reuse anything that isn't the complete video.
-      }
-    }
   }
 
   bool isDownloaded(String lessonId) {
@@ -1037,6 +1259,7 @@ class EncryptedDownloadService {
       downloadedAt: DateTime.tryParse('${meta['downloadedAt']}'),
       thumbPath: (thumb == null || thumb.isEmpty) ? null : thumb,
       sizeBytes: meta['sizeBytes'] is int ? meta['sizeBytes'] as int : 0,
+      isLocked: _needsRevalidation(meta),
     );
   }
 }

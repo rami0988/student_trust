@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
+import android.os.StatFs
 import android.provider.MediaStore
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
@@ -43,6 +44,16 @@ class MainActivity : FlutterActivity() {
                             result.success(saveToDownloads(srcPath, fileName, mime))
                         } catch (e: Exception) {
                             result.error("SAVE_FAILED", e.message, null)
+                        }
+                    }
+                    // Free bytes on the volume holding app-private storage, where
+                    // downloads are written. Used by the Dart StorageGuard to refuse
+                    // a download that can't fit instead of failing at 90%.
+                    "getFreeDiskBytes" -> {
+                        try {
+                            result.success(StatFs(filesDir.path).availableBytes)
+                        } catch (e: Exception) {
+                            result.error("STATFS_FAILED", e.message, null)
                         }
                     }
                     else -> result.notImplemented()

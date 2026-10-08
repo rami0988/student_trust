@@ -14,6 +14,10 @@ class DownloadedLessonInfo extends Equatable {
   /// existed — the UI treats that as "unknown" rather than "empty".
   final int sizeBytes;
 
+  /// Past the 7-day revalidation window: the files are still here but can't
+  /// be played until the student goes online once.
+  final bool isLocked;
+
   const DownloadedLessonInfo({
     required this.lessonId,
     required this.title,
@@ -21,8 +25,9 @@ class DownloadedLessonInfo extends Equatable {
     required this.downloadedAt,
     this.thumbPath,
     this.sizeBytes = 0,
+    this.isLocked = false,
   });
 
   @override
-  List<Object?> get props => [lessonId, title, durationSeconds, downloadedAt, thumbPath, sizeBytes];
+  List<Object?> get props => [lessonId, title, durationSeconds, downloadedAt, thumbPath, sizeBytes, isLocked];
 }

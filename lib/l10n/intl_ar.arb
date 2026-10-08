@@ -143,5 +143,24 @@
     }
   },
   "totalDuration": "المدة الإجمالية",
-  "weakConnectionRetrying": "ضعف في الاتصال، جاري إعادة المحاولة..."
+  "weakConnectionRetrying": "ضعف في الاتصال، جاري إعادة المحاولة...",
+  "insufficientStorage": "لا توجد مساحة كافية على الجهاز — حرّر مساحة ثم استأنف التحميل",
+  "waitingForNetwork": "بانتظار الاتصال بالإنترنت",
+  "downloadExpired": "انتهت صلاحية التنزيل بعد 30 يوماً — أعد تنزيل الدرس",
+  "downloadLocked": "مقفل — اتصل بالإنترنت مرة للتحقق من الاشتراك",
+  "downloadsInProgress": "قيد التحميل",
+  "perSecond": "/ث",
+  "timeLeft": "متبقٍ {time}",
+  "mediaCorrupted": "الملف المحمّل تالف وتم حذفه — أعد تنزيل الدرس",
+  "subscriptionEndedDownloadRemoved": "انتهى اشتراكك في هذه المادة، وتم حذف الدرس المحمّل",
+  "@timeLeft": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationDownloading": "جاري التحميل",
+  "notificationPaused": "التحميل متوقف مؤقتاً",
+  "notificationFailed": "تعذّر التحميل — افتح التطبيق للمتابعة"
 }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext HTTP is allowed ONLY to the on-device loopback address, where the
+  offline media server (OfflineMediaServer) streams downloaded lessons to the
+  player. Android 9+ blocks all cleartext by default, which would stop
+  ExoPlayer from opening http://127.0.0.1:<port>/...  No base-config is set,
+  so every other host keeps exactly the platform default it had before.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

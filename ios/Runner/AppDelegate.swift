@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -13,6 +14,12 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Lets background_downloader show (and react to taps on) lesson download
+    // notifications. Background URLSession completion itself needs NO code
+    // here: the plugin registers as an application delegate and handles
+    // application(_:handleEventsForBackgroundURLSession:completionHandler:)
+    // itself — implementing it here too would double-handle the OS callback.
+    UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -33,6 +40,17 @@ import UIKit
         // EventChannel below. We acknowledge the call so the shared Dart
         // SecurityService works on both platforms.
         result(nil)
+      case "getFreeDiskBytes":
+        // "Important usage" capacity counts space iOS will reclaim from
+        // purgeable caches for a user-initiated task — the right figure for a
+        // download the student explicitly asked for.
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        if let values = try? home.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]),
+           let capacity = values.volumeAvailableCapacityForImportantUsage {
+          result(NSNumber(value: capacity))
+        } else {
+          result(FlutterError(code: "CAPACITY_UNAVAILABLE", message: nil, details: nil))
+        }
       default:
         result(FlutterMethodNotImplemented)
       }

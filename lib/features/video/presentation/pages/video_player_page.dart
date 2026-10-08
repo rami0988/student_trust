@@ -15,7 +15,6 @@ import '../../../../core/utils/duration_utils.dart';
 import '../../../../core/utils/local_storage_keys.dart';
 import '../../../../core/utils/shared_preferences_helper.dart';
 import '../../../../generated/l10n.dart';
-import '../../../downloads/data/services/encrypted_download_service.dart';
 import '../../../lessons/domain/repositories/lessons_repository.dart';
 import '../cubit/video_cubit.dart';
 import '../cubit/video_state.dart';
@@ -177,9 +176,16 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
 
   BetterPlayerDataSource _dataSourceFor(VideoState state) {
     if (state.isLocal) {
-      // Local file: decode-only, no network, so the buffering cushion above is
-      // irrelevant — the defaults are correct here.
-      return BetterPlayerDataSource(BetterPlayerDataSourceType.file, state.videoUrl!.replaceFirst('file://', ''));
+      // Downloaded lesson, streamed from the on-device loopback server
+      // (OfflineMediaServer), which decrypts chunks on demand. Local and fast,
+      // so the default buffering is right. The player's disk cache stays OFF:
+      // it would write the decrypted video back to disk, which is exactly what
+      // streaming exists to avoid.
+      return BetterPlayerDataSource(
+        BetterPlayerDataSourceType.network,
+        state.videoUrl!,
+        cacheConfiguration: const BetterPlayerCacheConfiguration(useCache: false),
+      );
     }
     // BunnyCDN pull-zone requests must carry the embed Referer (the library
     // allow-lists it); the dev streaming endpoint needs the bearer instead.
@@ -382,15 +388,8 @@ class _VideoPlayerViewState extends State<_VideoPlayerView> with WidgetsBindingO
     // audio forever after the page is gone.
     _betterPlayerController?.pause();
     _betterPlayerController?.dispose(forceDispose: true);
-    // Offline playback decrypts the lesson into a plaintext temp file. Leaving
-    // it behind hands anyone with file access an unencrypted copy of every
-    // lesson the student has watched — which defeats the point of encrypting
-    // the chunks at rest — and it accumulates. Fire-and-forget: dispose can't
-    // await, and a failed cleanup must never break leaving the screen (the
-    // 2-hour staleness check and deleteLesson both still cover it).
-    if (widget.args.isOffline) {
-      unawaited(getIt<EncryptedDownloadService>().clearTempFile(widget.args.lessonId).catchError((_) {}));
-    }
+    // Offline playback writes no plaintext file any more, so there is nothing
+    // to clean up here; VideoCubit.close() stops serving the lesson.
     super.dispose();
   }
 

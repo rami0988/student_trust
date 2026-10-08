@@ -1225,6 +1225,116 @@ class S {
       args: [],
     );
   }
+
+  /// `Not enough storage — free up space, then resume the download`
+  String get insufficientStorage {
+    return Intl.message(
+      'Not enough storage — free up space, then resume the download',
+      name: 'insufficientStorage',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Waiting for network`
+  String get waitingForNetwork {
+    return Intl.message(
+      'Waiting for network',
+      name: 'waitingForNetwork',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Download expired after 30 days — download the lesson again`
+  String get downloadExpired {
+    return Intl.message(
+      'Download expired after 30 days — download the lesson again',
+      name: 'downloadExpired',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Locked — go online once to verify your subscription`
+  String get downloadLocked {
+    return Intl.message(
+      'Locked — go online once to verify your subscription',
+      name: 'downloadLocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `In progress`
+  String get downloadsInProgress {
+    return Intl.message(
+      'In progress',
+      name: 'downloadsInProgress',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `/s`
+  String get perSecond {
+    return Intl.message('/s', name: 'perSecond', desc: '', args: []);
+  }
+
+  /// `{time} left`
+  String timeLeft(String time) {
+    return Intl.message('$time left', name: 'timeLeft', desc: '', args: [time]);
+  }
+
+  /// `The downloaded file was damaged and removed — download the lesson again`
+  String get mediaCorrupted {
+    return Intl.message(
+      'The downloaded file was damaged and removed — download the lesson again',
+      name: 'mediaCorrupted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your subscription to this subject ended, so the download was removed`
+  String get subscriptionEndedDownloadRemoved {
+    return Intl.message(
+      'Your subscription to this subject ended, so the download was removed',
+      name: 'subscriptionEndedDownloadRemoved',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Downloading`
+  String get notificationDownloading {
+    return Intl.message(
+      'Downloading',
+      name: 'notificationDownloading',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Download paused`
+  String get notificationPaused {
+    return Intl.message(
+      'Download paused',
+      name: 'notificationPaused',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Download failed — open the app to continue`
+  String get notificationFailed {
+    return Intl.message(
+      'Download failed — open the app to continue',
+      name: 'notificationFailed',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

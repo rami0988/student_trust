@@ -17,9 +17,11 @@ import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../offline/presentation/widgets/downloaded_video_tile.dart';
 import '../../../video/presentation/pages/video_player_args.dart';
 import '../../data/services/encrypted_download_service.dart';
+import '../../domain/entities/download_item.dart';
 import '../../domain/entities/downloaded_lesson_info.dart';
 import '../cubit/download_cubit.dart';
 import '../cubit/download_state.dart';
+import '../widgets/download_progress_format.dart';
 
 /// Manages downloaded lessons **while online** — play, delete one, delete all,
 /// and see how much storage they take.
@@ -143,6 +145,9 @@ class _DownloadsPageState extends State<DownloadsPage> {
         ),
         body: Column(
           children: [
+            // Live transfers (and those paused / waiting for the network), so a
+            // student can see what is still coming and how fast.
+            const _InProgressSection(),
             if (_items.isNotEmpty)
               _DownloadsSummary(
                 count: _items.length,
@@ -205,6 +210,86 @@ class _DownloadsPageState extends State<DownloadsPage> {
       }
     }
     return false;
+  }
+}
+
+/// Downloads still in flight, with sizes, speed and time left. Rebuilds only
+/// when the cubit emits — which is throttled to ~4 times a second.
+class _InProgressSection extends StatelessWidget {
+  const _InProgressSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<DownloadCubit, DownloadState>(
+      builder: (context, state) {
+        final List<DownloadItem> active = state.items.values.where((i) => i.isBusy).toList();
+        if (active.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(AppTokens.s16, AppTokens.s16, AppTokens.s16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(S.of(context).downloadsInProgress, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+              const SizedBox(height: AppTokens.s8),
+              for (final DownloadItem item in active) _InProgressRow(item: item),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _InProgressRow extends StatelessWidget {
+  final DownloadItem item;
+  const _InProgressRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final DownloadCubit cubit = context.read<DownloadCubit>();
+    final bool running = item.status == DownloadItemStatus.downloading || item.status == DownloadItemStatus.queued;
+    final String detail = DownloadProgressFormat.detail(context, item);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTokens.s12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title.isEmpty ? S.of(context).download : item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: AppTokens.s4),
+                LinearProgressIndicator(
+                  value: item.status == DownloadItemStatus.queued || item.progress == 0 ? null : item.progress,
+                  minHeight: 4,
+                  borderRadius: AppTokens.radiusLG,
+                  color: running ? AppColors.primary : AppColors.textSecondary,
+                ),
+                if (detail.isNotEmpty) ...[
+                  const SizedBox(height: AppTokens.s4),
+                  Text(detail, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: running ? S.of(context).pauseDownload : S.of(context).resumeDownload,
+            icon: Icon(running ? Icons.pause_rounded : Icons.play_arrow_rounded, color: AppColors.primary),
+            onPressed: () => running ? cubit.pauseDownload(item.lessonId) : cubit.resumeDownload(item.lessonId),
+          ),
+          IconButton(
+            tooltip: S.of(context).cancelDownload,
+            icon: const Icon(Icons.close_rounded, color: AppColors.error),
+            onPressed: () => cubit.cancelDownload(item.lessonId),
+          ),
+        ],
+      ),
+    );
   }
 }
 

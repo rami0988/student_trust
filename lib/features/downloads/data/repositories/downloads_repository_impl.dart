@@ -2,6 +2,7 @@ import 'package:injectable/injectable.dart';
 
 import '../../../../core/repositories/base_repository_impl.dart';
 import '../../../../core/utils/request_result.dart';
+import '../../domain/entities/download_verdict.dart';
 import '../../domain/repositories/downloads_repository.dart';
 import '../data_sources/downloads_remote_data_source.dart';
 
@@ -17,4 +18,8 @@ class DownloadsRepositoryImpl extends BaseRepositoryImpl implements DownloadsRep
 
   @override
   Future<RequestResult<bool>> validateDownload(String lessonId) => execute(() => _downloadsRemoteDataSource.validateDownload(lessonId));
+
+  @override
+  Future<RequestResult<Map<String, DownloadVerdict>>> validateDownloads(List<String> lessonIds) =>
+      execute(() => _downloadsRemoteDataSource.validateDownloads(lessonIds));
 }

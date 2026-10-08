@@ -38,6 +38,7 @@ abstract class Endpoints {
   /// *** Downloads ***
   static const String registerDownload = '/student/downloads';
   static String validateDownload(String lessonId) => '/student/downloads/$lessonId/validate';
+  static const String validateDownloads = '/student/downloads/validate';
 
   /// *** Worksheets *** (read-only for students)
   static String worksheetsByChapter(String chapterId) => '/worksheets/chapter/$chapterId';

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:event_bus/event_bus.dart';
 
 import '../di/di.dart';
+import '../event_bus/account_deactivated_event.dart';
 import '../event_bus/session_expired_event.dart';
 import '../utils/local_storage_keys.dart';
 import '../utils/shared_preferences_helper.dart';
@@ -56,6 +57,12 @@ class TokenRefreshInterceptor extends Interceptor {
 
   @override
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+    // A live request rejected because the account was deactivated (backend
+    // requireActiveStudent → 401, or a 403 from elsewhere). Announced before
+    // anything else so downloads are purged even if the rest of this handler
+    // bails out early.
+    _announceIfDeactivated(err.response);
+
     if (err.response?.statusCode != 401) {
       return handler.next(err);
     }
@@ -138,10 +145,19 @@ class TokenRefreshInterceptor extends Interceptor {
     );
     if (refreshToken.isEmpty) return null;
 
-    final Response<dynamic> response = await _refreshClientFactory().post<dynamic>(
-      Endpoints.refreshToken,
-      data: {'refreshToken': refreshToken},
-    );
+    final Response<dynamic> response;
+    try {
+      response = await _refreshClientFactory().post<dynamic>(
+        Endpoints.refreshToken,
+        data: {'refreshToken': refreshToken},
+      );
+    } on DioException catch (e) {
+      // /auth/refresh answers 403 ACCOUNT_INACTIVE when the token expired
+      // AFTER the account was deactivated — the other way a deactivation
+      // reaches the app.
+      _announceIfDeactivated(e.response);
+      rethrow;
+    }
 
     final dynamic body = response.data;
     if (body is! Map) return null;
@@ -163,6 +179,15 @@ class TokenRefreshInterceptor extends Interceptor {
     }
 
     return accessToken;
+  }
+
+  /// Fires [AccountDeactivatedEvent] when [response] carries the backend's
+  /// `ACCOUNT_INACTIVE` code (401 from a live request, 403 from refresh).
+  static void _announceIfDeactivated(Response<dynamic>? response) {
+    final dynamic body = response?.data;
+    if (body is Map && body['error'] == 'ACCOUNT_INACTIVE') {
+      getIt<EventBus>().fire(const AccountDeactivatedEvent());
+    }
   }
 
   /// Marks a replayed request so a second 401 can't start another cycle.

@@ -3,20 +3,24 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i4;
+import 'dart:async' as _i6;
+import 'dart:io' as _i3;
 
-import 'package:mobile_template/core/models/paginated_result.dart' as _i5;
+import 'package:dio/dio.dart' as _i11;
+import 'package:mobile_template/core/models/paginated_result.dart' as _i7;
 import 'package:mobile_template/core/utils/request_result.dart' as _i2;
 import 'package:mobile_template/features/downloads/data/services/encrypted_download_service.dart'
-    as _i7;
-import 'package:mobile_template/features/downloads/domain/entities/downloaded_lesson_info.dart'
     as _i9;
+import 'package:mobile_template/features/downloads/data/services/offline_crypto.dart'
+    as _i4;
+import 'package:mobile_template/features/downloads/domain/entities/downloaded_lesson_info.dart'
+    as _i12;
 import 'package:mobile_template/features/lessons/domain/entities/lesson.dart'
-    as _i6;
+    as _i8;
 import 'package:mobile_template/features/lessons/domain/repositories/lessons_repository.dart'
-    as _i3;
+    as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i8;
+import 'package:mockito/src/dummies.dart' as _i10;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -39,12 +43,23 @@ class _FakeRequestResult_0<T> extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
+class _FakeDirectory_1 extends _i1.SmartFake implements _i3.Directory {
+  _FakeDirectory_1(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakeOfflinePlaybackSource_2 extends _i1.SmartFake
+    implements _i4.OfflinePlaybackSource {
+  _FakeOfflinePlaybackSource_2(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
 /// A class which mocks [LessonsRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
+class MockLessonsRepository extends _i1.Mock implements _i5.LessonsRepository {
   @override
-  _i4.Future<_i2.RequestResult<_i5.PaginatedResult<_i6.Lesson>>> getLessons(
+  _i6.Future<_i2.RequestResult<_i7.PaginatedResult<_i8.Lesson>>> getLessons(
     String? chapterId, {
     int? page = 1,
     int? limit = 50,
@@ -56,10 +71,10 @@ class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
               {#page: page, #limit: limit},
             ),
             returnValue:
-                _i4.Future<
-                  _i2.RequestResult<_i5.PaginatedResult<_i6.Lesson>>
+                _i6.Future<
+                  _i2.RequestResult<_i7.PaginatedResult<_i8.Lesson>>
                 >.value(
-                  _FakeRequestResult_0<_i5.PaginatedResult<_i6.Lesson>>(
+                  _FakeRequestResult_0<_i7.PaginatedResult<_i8.Lesson>>(
                     this,
                     Invocation.method(
                       #getLessons,
@@ -69,10 +84,10 @@ class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
                   ),
                 ),
             returnValueForMissingStub:
-                _i4.Future<
-                  _i2.RequestResult<_i5.PaginatedResult<_i6.Lesson>>
+                _i6.Future<
+                  _i2.RequestResult<_i7.PaginatedResult<_i8.Lesson>>
                 >.value(
-                  _FakeRequestResult_0<_i5.PaginatedResult<_i6.Lesson>>(
+                  _FakeRequestResult_0<_i7.PaginatedResult<_i8.Lesson>>(
                     this,
                     Invocation.method(
                       #getLessons,
@@ -82,10 +97,10 @@ class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
                   ),
                 ),
           )
-          as _i4.Future<_i2.RequestResult<_i5.PaginatedResult<_i6.Lesson>>>);
+          as _i6.Future<_i2.RequestResult<_i7.PaginatedResult<_i8.Lesson>>>);
 
   @override
-  _i4.Future<void> saveProgress(
+  _i6.Future<void> saveProgress(
     String? lessonId,
     int? positionSeconds,
     bool? isCompleted,
@@ -96,19 +111,19 @@ class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
               positionSeconds,
               isCompleted,
             ]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i6.Future<void>);
 
   @override
-  _i4.Future<_i2.RequestResult<T>> execute<T, TM>(
-    _i4.FutureOr<TM> Function()? apiRequest, {
-    _i4.FutureOr<T> Function(TM)? converter,
+  _i6.Future<_i2.RequestResult<T>> execute<T, TM>(
+    _i6.FutureOr<TM> Function()? apiRequest, {
+    _i6.FutureOr<T> Function(TM)? converter,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#execute, [apiRequest], {#converter: converter}),
-            returnValue: _i4.Future<_i2.RequestResult<T>>.value(
+            returnValue: _i6.Future<_i2.RequestResult<T>>.value(
               _FakeRequestResult_0<T>(
                 this,
                 Invocation.method(
@@ -118,7 +133,7 @@ class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
                 ),
               ),
             ),
-            returnValueForMissingStub: _i4.Future<_i2.RequestResult<T>>.value(
+            returnValueForMissingStub: _i6.Future<_i2.RequestResult<T>>.value(
               _FakeRequestResult_0<T>(
                 this,
                 Invocation.method(
@@ -129,7 +144,7 @@ class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
               ),
             ),
           )
-          as _i4.Future<_i2.RequestResult<T>>);
+          as _i6.Future<_i2.RequestResult<T>>);
 
   @override
   _i2.RequestResult<T> executeSync<T, TM>(
@@ -162,18 +177,28 @@ class MockLessonsRepository extends _i1.Mock implements _i3.LessonsRepository {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockEncryptedDownloadService extends _i1.Mock
-    implements _i7.EncryptedDownloadService {
+    implements _i9.EncryptedDownloadService {
   @override
-  _i4.Future<_i7.DownloadOutcome> downloadLesson({
+  List<String> get expiredOnLastReconcile =>
+      (super.noSuchMethod(
+            Invocation.getter(#expiredOnLastReconcile),
+            returnValue: <String>[],
+            returnValueForMissingStub: <String>[],
+          )
+          as List<String>);
+
+  @override
+  _i6.Future<_i9.DownloadOutcome> downloadLesson({
     required String? lessonId,
     required String? videoUrl,
     required String? studentId,
     required String? deviceUuid,
-    required _i4.Future<String> Function()? accessToken,
+    required _i6.Future<String> Function()? accessToken,
     required void Function(double)? onProgress,
     String? title = '',
     int? durationSeconds = 0,
     String? thumbnailUrl,
+    void Function(int, int)? onBytes,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#downloadLesson, [], {
@@ -186,15 +211,119 @@ class MockEncryptedDownloadService extends _i1.Mock
               #title: title,
               #durationSeconds: durationSeconds,
               #thumbnailUrl: thumbnailUrl,
+              #onBytes: onBytes,
             }),
-            returnValue: _i4.Future<_i7.DownloadOutcome>.value(
-              _i7.DownloadOutcome.completed,
+            returnValue: _i6.Future<_i9.DownloadOutcome>.value(
+              _i9.DownloadOutcome.completed,
             ),
-            returnValueForMissingStub: _i4.Future<_i7.DownloadOutcome>.value(
-              _i7.DownloadOutcome.completed,
+            returnValueForMissingStub: _i6.Future<_i9.DownloadOutcome>.value(
+              _i9.DownloadOutcome.completed,
             ),
           )
-          as _i4.Future<_i7.DownloadOutcome>);
+          as _i6.Future<_i9.DownloadOutcome>);
+
+  @override
+  _i6.Future<_i3.Directory> lessonDirectory(String? lessonId) =>
+      (super.noSuchMethod(
+            Invocation.method(#lessonDirectory, [lessonId]),
+            returnValue: _i6.Future<_i3.Directory>.value(
+              _FakeDirectory_1(
+                this,
+                Invocation.method(#lessonDirectory, [lessonId]),
+              ),
+            ),
+            returnValueForMissingStub: _i6.Future<_i3.Directory>.value(
+              _FakeDirectory_1(
+                this,
+                Invocation.method(#lessonDirectory, [lessonId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i3.Directory>);
+
+  @override
+  _i6.Future<void> beginDownload(String? lessonId) =>
+      (super.noSuchMethod(
+            Invocation.method(#beginDownload, [lessonId]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> discardPartial(String? lessonId) =>
+      (super.noSuchMethod(
+            Invocation.method(#discardPartial, [lessonId]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
+  _i6.Future<String> resolveDownloadUrl({
+    required String? videoUrl,
+    required _i6.Future<String> Function()? accessToken,
+    required String? deviceUuid,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#resolveDownloadUrl, [], {
+              #videoUrl: videoUrl,
+              #accessToken: accessToken,
+              #deviceUuid: deviceUuid,
+            }),
+            returnValue: _i6.Future<String>.value(
+              _i10.dummyValue<String>(
+                this,
+                Invocation.method(#resolveDownloadUrl, [], {
+                  #videoUrl: videoUrl,
+                  #accessToken: accessToken,
+                  #deviceUuid: deviceUuid,
+                }),
+              ),
+            ),
+            returnValueForMissingStub: _i6.Future<String>.value(
+              _i10.dummyValue<String>(
+                this,
+                Invocation.method(#resolveDownloadUrl, [], {
+                  #videoUrl: videoUrl,
+                  #accessToken: accessToken,
+                  #deviceUuid: deviceUuid,
+                }),
+              ),
+            ),
+          )
+          as _i6.Future<String>);
+
+  @override
+  _i6.Future<void> finalizeTransferredFile({
+    required String? lessonId,
+    required int? expectedTotal,
+    required String? studentId,
+    required String? deviceUuid,
+    required _i6.Future<String> Function()? accessToken,
+    required void Function(double)? onProgress,
+    String? title = '',
+    int? durationSeconds = 0,
+    String? thumbnailUrl,
+    _i11.Dio? dio,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#finalizeTransferredFile, [], {
+              #lessonId: lessonId,
+              #expectedTotal: expectedTotal,
+              #studentId: studentId,
+              #deviceUuid: deviceUuid,
+              #accessToken: accessToken,
+              #onProgress: onProgress,
+              #title: title,
+              #durationSeconds: durationSeconds,
+              #thumbnailUrl: thumbnailUrl,
+              #dio: dio,
+            }),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
 
   @override
   bool isActive(String? lessonId) =>
@@ -218,93 +347,114 @@ class MockEncryptedDownloadService extends _i1.Mock
   );
 
   @override
-  _i4.Future<String> getOfflineVideoPath({
+  _i6.Future<_i4.OfflinePlaybackSource> prepareOfflinePlayback({
     required String? lessonId,
     required String? studentId,
     required String? deviceUuid,
   }) =>
       (super.noSuchMethod(
-            Invocation.method(#getOfflineVideoPath, [], {
+            Invocation.method(#prepareOfflinePlayback, [], {
               #lessonId: lessonId,
               #studentId: studentId,
               #deviceUuid: deviceUuid,
             }),
-            returnValue: _i4.Future<String>.value(
-              _i8.dummyValue<String>(
+            returnValue: _i6.Future<_i4.OfflinePlaybackSource>.value(
+              _FakeOfflinePlaybackSource_2(
                 this,
-                Invocation.method(#getOfflineVideoPath, [], {
+                Invocation.method(#prepareOfflinePlayback, [], {
                   #lessonId: lessonId,
                   #studentId: studentId,
                   #deviceUuid: deviceUuid,
                 }),
               ),
             ),
-            returnValueForMissingStub: _i4.Future<String>.value(
-              _i8.dummyValue<String>(
-                this,
-                Invocation.method(#getOfflineVideoPath, [], {
-                  #lessonId: lessonId,
-                  #studentId: studentId,
-                  #deviceUuid: deviceUuid,
-                }),
-              ),
-            ),
+            returnValueForMissingStub:
+                _i6.Future<_i4.OfflinePlaybackSource>.value(
+                  _FakeOfflinePlaybackSource_2(
+                    this,
+                    Invocation.method(#prepareOfflinePlayback, [], {
+                      #lessonId: lessonId,
+                      #studentId: studentId,
+                      #deviceUuid: deviceUuid,
+                    }),
+                  ),
+                ),
           )
-          as _i4.Future<String>);
+          as _i6.Future<_i4.OfflinePlaybackSource>);
 
   @override
-  _i4.Future<void> markValidated(String? lessonId) =>
+  _i6.Future<List<String>> purgeExpired() =>
+      (super.noSuchMethod(
+            Invocation.method(#purgeExpired, []),
+            returnValue: _i6.Future<List<String>>.value(<String>[]),
+            returnValueForMissingStub: _i6.Future<List<String>>.value(
+              <String>[],
+            ),
+          )
+          as _i6.Future<List<String>>);
+
+  @override
+  _i6.Future<void> markValidated(String? lessonId) =>
       (super.noSuchMethod(
             Invocation.method(#markValidated, [lessonId]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i6.Future<void>);
 
   @override
-  _i4.Future<void> markDamaged(String? lessonId) =>
+  _i6.Future<void> markDamaged(String? lessonId) =>
       (super.noSuchMethod(
             Invocation.method(#markDamaged, [lessonId]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i6.Future<void>);
 
   @override
-  _i4.Future<int> reconcileOnStartup() =>
+  _i6.Future<int> reconcileOnStartup({bool Function(String)? isTracked}) =>
       (super.noSuchMethod(
-            Invocation.method(#reconcileOnStartup, []),
-            returnValue: _i4.Future<int>.value(0),
-            returnValueForMissingStub: _i4.Future<int>.value(0),
+            Invocation.method(#reconcileOnStartup, [], {#isTracked: isTracked}),
+            returnValue: _i6.Future<int>.value(0),
+            returnValueForMissingStub: _i6.Future<int>.value(0),
           )
-          as _i4.Future<int>);
+          as _i6.Future<int>);
 
   @override
-  _i4.Future<void> deleteLesson(String? lessonId) =>
+  bool isPastOfflineLifetime(Map<dynamic, dynamic>? meta) =>
+      (super.noSuchMethod(
+            Invocation.method(#isPastOfflineLifetime, [meta]),
+            returnValue: false,
+            returnValueForMissingStub: false,
+          )
+          as bool);
+
+  @override
+  _i6.Future<void> purgeEverything() =>
+      (super.noSuchMethod(
+            Invocation.method(#purgeEverything, []),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> deleteLesson(String? lessonId) =>
       (super.noSuchMethod(
             Invocation.method(#deleteLesson, [lessonId]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i6.Future<void>);
 
   @override
-  _i4.Future<int> deleteAll() =>
+  _i6.Future<int> deleteAll() =>
       (super.noSuchMethod(
             Invocation.method(#deleteAll, []),
-            returnValue: _i4.Future<int>.value(0),
-            returnValueForMissingStub: _i4.Future<int>.value(0),
+            returnValue: _i6.Future<int>.value(0),
+            returnValueForMissingStub: _i6.Future<int>.value(0),
           )
-          as _i4.Future<int>);
-
-  @override
-  _i4.Future<void> clearTempFile(String? lessonId) =>
-      (super.noSuchMethod(
-            Invocation.method(#clearTempFile, [lessonId]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+          as _i6.Future<int>);
 
   @override
   bool isDownloaded(String? lessonId) =>
@@ -333,11 +483,11 @@ class MockEncryptedDownloadService extends _i1.Mock
           as int);
 
   @override
-  List<_i9.DownloadedLessonInfo> getDownloadedLessons() =>
+  List<_i12.DownloadedLessonInfo> getDownloadedLessons() =>
       (super.noSuchMethod(
             Invocation.method(#getDownloadedLessons, []),
-            returnValue: <_i9.DownloadedLessonInfo>[],
-            returnValueForMissingStub: <_i9.DownloadedLessonInfo>[],
+            returnValue: <_i12.DownloadedLessonInfo>[],
+            returnValueForMissingStub: <_i12.DownloadedLessonInfo>[],
           )
-          as List<_i9.DownloadedLessonInfo>);
+          as List<_i12.DownloadedLessonInfo>);
 }

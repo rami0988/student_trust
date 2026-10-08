@@ -54,17 +54,36 @@ class DownloadedVideoTile extends StatelessWidget {
                           style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary, height: 1.3),
                         ),
                         const SizedBox(height: 8),
+                        // Past the 7-day revalidation window the lesson is
+                        // locked (still on disk) until the student goes online
+                        // once — say so here instead of letting the play tap
+                        // fail with no warning.
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: AppColors.successSoft, borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(
+                            color: lesson.isLocked ? AppColors.warningSoft : AppColors.successSoft,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.offline_pin_rounded, size: 13, color: AppColors.success),
+                              Icon(
+                                lesson.isLocked ? Icons.lock_clock_rounded : Icons.offline_pin_rounded,
+                                size: 13,
+                                color: lesson.isLocked ? AppColors.warning : AppColors.success,
+                              ),
                               const SizedBox(width: 4),
-                              Text(
-                                S.of(context).availableOffline,
-                                style: const TextStyle(fontSize: 11.5, color: AppColors.success, fontWeight: FontWeight.w700),
+                              Flexible(
+                                child: Text(
+                                  lesson.isLocked ? S.of(context).downloadLocked : S.of(context).availableOffline,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: lesson.isLocked ? AppColors.warning : AppColors.success,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ],
                           ),

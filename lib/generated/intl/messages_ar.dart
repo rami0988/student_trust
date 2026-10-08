@@ -45,7 +45,9 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m9(count) =>
       "${Intl.plural(count, one: 'منذ سنة', two: 'منذ سنتين', few: 'منذ ${count} سنوات', many: 'منذ ${count} سنة', other: 'منذ ${count} سنة')}";
 
-  static String m10(count) => "أوراق العمل (${count})";
+  static String m10(time) => "متبقٍ ${time}";
+
+  static String m11(count) => "أوراق العمل (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -94,9 +96,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "downloadDeleted": MessageLookupByLibrary.simpleMessage(
       "تم حذف الدرس من التحميلات",
     ),
+    "downloadExpired": MessageLookupByLibrary.simpleMessage(
+      "انتهت صلاحية التنزيل بعد 30 يوماً — أعد تنزيل الدرس",
+    ),
     "downloadFailed": MessageLookupByLibrary.simpleMessage("فشل التحميل"),
     "downloadIncomplete": MessageLookupByLibrary.simpleMessage(
       "انقطع التحميل قبل اكتماله — أعد المحاولة",
+    ),
+    "downloadLocked": MessageLookupByLibrary.simpleMessage(
+      "مقفل — اتصل بالإنترنت مرة للتحقق من الاشتراك",
     ),
     "downloadToDeviceTooltip": MessageLookupByLibrary.simpleMessage(
       "تحميل إلى الجهاز",
@@ -104,6 +112,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "downloaded": MessageLookupByLibrary.simpleMessage("تم التحميل"),
     "downloadsCount": m0,
     "downloadsDeleted": m1,
+    "downloadsInProgress": MessageLookupByLibrary.simpleMessage("قيد التحميل"),
     "downloadsTitle": MessageLookupByLibrary.simpleMessage("التحميلات"),
     "emailCopied": MessageLookupByLibrary.simpleMessage("تم نسخ البريد"),
     "emailFormatNotCorrect": MessageLookupByLibrary.simpleMessage(
@@ -129,6 +138,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "gradeBac": MessageLookupByLibrary.simpleMessage("بكالوريا"),
     "gradeGeneral": MessageLookupByLibrary.simpleMessage("عام"),
     "gradeNine": MessageLookupByLibrary.simpleMessage("الصف التاسع"),
+    "insufficientStorage": MessageLookupByLibrary.simpleMessage(
+      "لا توجد مساحة كافية على الجهاز — حرّر مساحة ثم استأنف التحميل",
+    ),
     "language": MessageLookupByLibrary.simpleMessage("اللغة"),
     "lessons": MessageLookupByLibrary.simpleMessage("الدروس"),
     "loginButton": MessageLookupByLibrary.simpleMessage("دخول"),
@@ -138,6 +150,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "هل تريد تسجيل الخروج؟",
     ),
     "manageDownloads": MessageLookupByLibrary.simpleMessage("إدارة التحميلات"),
+    "mediaCorrupted": MessageLookupByLibrary.simpleMessage(
+      "الملف المحمّل تالف وتم حذفه — أعد تنزيل الدرس",
+    ),
     "myDownloads": MessageLookupByLibrary.simpleMessage("تحميلاتي"),
     "networkErrorSubtitle": MessageLookupByLibrary.simpleMessage(
       "يبدو أن الاتصال بالإنترنت غير متوفر. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
@@ -165,6 +180,15 @@ class MessageLookup extends MessageLookupByLibrary {
       "لا توجد أوراق عمل بعد",
     ),
     "notSubscribed": MessageLookupByLibrary.simpleMessage("غير مشترك"),
+    "notificationDownloading": MessageLookupByLibrary.simpleMessage(
+      "جاري التحميل",
+    ),
+    "notificationFailed": MessageLookupByLibrary.simpleMessage(
+      "تعذّر التحميل — افتح التطبيق للمتابعة",
+    ),
+    "notificationPaused": MessageLookupByLibrary.simpleMessage(
+      "التحميل متوقف مؤقتاً",
+    ),
     "notifications": MessageLookupByLibrary.simpleMessage("الإشعارات"),
     "offlineBanner": MessageLookupByLibrary.simpleMessage(
       "أنت غير متصل بالإنترنت — يتم عرض التحميلات فقط",
@@ -187,6 +211,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "pauseDownload": MessageLookupByLibrary.simpleMessage("إيقاف مؤقت"),
     "pdfDisplayError": MessageLookupByLibrary.simpleMessage("تعذّر عرض الملف"),
+    "perSecond": MessageLookupByLibrary.simpleMessage("/ث"),
     "phoneNumber": MessageLookupByLibrary.simpleMessage("رقم الهاتف"),
     "pleaseCompleteVerificationCode": MessageLookupByLibrary.simpleMessage(
       "الرجاء إكمال رمز التحقق المكون من 6 أرقام",
@@ -256,6 +281,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "studentLabel": MessageLookupByLibrary.simpleMessage("طالب"),
     "subjects": MessageLookupByLibrary.simpleMessage("المواد الدراسية"),
     "subscribed": MessageLookupByLibrary.simpleMessage("مشترك"),
+    "subscriptionEndedDownloadRemoved": MessageLookupByLibrary.simpleMessage(
+      "انتهى اشتراكك في هذه المادة، وتم حذف الدرس المحمّل",
+    ),
     "syrianPhoneNumbersShouldBe10DigitsPleaseCheckAndTryAgain":
         MessageLookupByLibrary.simpleMessage(
           "أرقام الهواتف السورية يجب أن تكون 10 أرقام، الرجاء التحقق والمحاولة مجدداً",
@@ -277,6 +305,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "timeAgoMonths": m8,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("الآن"),
     "timeAgoYears": m9,
+    "timeLeft": m10,
     "totalDuration": MessageLookupByLibrary.simpleMessage("المدة الإجمالية"),
     "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("جهاز غير آمن"),
     "username": MessageLookupByLibrary.simpleMessage("اسم المستخدم"),
@@ -290,10 +319,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "الفيديو قيد المعالجة\nحاول مرة أخرى بعد قليل",
     ),
+    "waitingForNetwork": MessageLookupByLibrary.simpleMessage(
+      "بانتظار الاتصال بالإنترنت",
+    ),
     "weakConnectionRetrying": MessageLookupByLibrary.simpleMessage(
       "ضعف في الاتصال، جاري إعادة المحاولة...",
     ),
-    "worksheetsWithCount": m10,
+    "worksheetsWithCount": m11,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل تشمل حروفاً وأرقاماً",

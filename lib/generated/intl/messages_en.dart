@@ -45,7 +45,9 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m9(count) =>
       "${Intl.plural(count, one: '${count} year ago', other: '${count} years ago')}";
 
-  static String m10(count) => "Worksheets (${count})";
+  static String m10(time) => "${time} left";
+
+  static String m11(count) => "Worksheets (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -94,9 +96,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "downloadDeleted": MessageLookupByLibrary.simpleMessage(
       "Lesson removed from downloads",
     ),
+    "downloadExpired": MessageLookupByLibrary.simpleMessage(
+      "Download expired after 30 days — download the lesson again",
+    ),
     "downloadFailed": MessageLookupByLibrary.simpleMessage("Download failed"),
     "downloadIncomplete": MessageLookupByLibrary.simpleMessage(
       "The download stopped before it finished - please try again",
+    ),
+    "downloadLocked": MessageLookupByLibrary.simpleMessage(
+      "Locked — go online once to verify your subscription",
     ),
     "downloadToDeviceTooltip": MessageLookupByLibrary.simpleMessage(
       "Download to device",
@@ -104,6 +112,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "downloaded": MessageLookupByLibrary.simpleMessage("Downloaded"),
     "downloadsCount": m0,
     "downloadsDeleted": m1,
+    "downloadsInProgress": MessageLookupByLibrary.simpleMessage("In progress"),
     "downloadsTitle": MessageLookupByLibrary.simpleMessage("Downloads"),
     "emailCopied": MessageLookupByLibrary.simpleMessage("Email copied"),
     "emailFormatNotCorrect": MessageLookupByLibrary.simpleMessage(
@@ -133,6 +142,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "gradeBac": MessageLookupByLibrary.simpleMessage("Baccalaureate"),
     "gradeGeneral": MessageLookupByLibrary.simpleMessage("General"),
     "gradeNine": MessageLookupByLibrary.simpleMessage("9th grade"),
+    "insufficientStorage": MessageLookupByLibrary.simpleMessage(
+      "Not enough storage — free up space, then resume the download",
+    ),
     "language": MessageLookupByLibrary.simpleMessage("Language"),
     "lessons": MessageLookupByLibrary.simpleMessage("Lessons"),
     "loginButton": MessageLookupByLibrary.simpleMessage("Log in"),
@@ -142,6 +154,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Are you sure you want to log out?",
     ),
     "manageDownloads": MessageLookupByLibrary.simpleMessage("Manage downloads"),
+    "mediaCorrupted": MessageLookupByLibrary.simpleMessage(
+      "The downloaded file was damaged and removed — download the lesson again",
+    ),
     "myDownloads": MessageLookupByLibrary.simpleMessage("My downloads"),
     "networkErrorSubtitle": MessageLookupByLibrary.simpleMessage(
       "It seems you\'re not connected to the internet. Please check your connection and try again.",
@@ -167,6 +182,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "noSubjects": MessageLookupByLibrary.simpleMessage("No subjects available"),
     "noWorksheets": MessageLookupByLibrary.simpleMessage("No worksheets yet"),
     "notSubscribed": MessageLookupByLibrary.simpleMessage("Not subscribed"),
+    "notificationDownloading": MessageLookupByLibrary.simpleMessage(
+      "Downloading",
+    ),
+    "notificationFailed": MessageLookupByLibrary.simpleMessage(
+      "Download failed — open the app to continue",
+    ),
+    "notificationPaused": MessageLookupByLibrary.simpleMessage(
+      "Download paused",
+    ),
     "notifications": MessageLookupByLibrary.simpleMessage("Notifications"),
     "offlineBanner": MessageLookupByLibrary.simpleMessage(
       "You\'re offline — showing downloads only",
@@ -191,6 +215,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "pdfDisplayError": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t display the file",
     ),
+    "perSecond": MessageLookupByLibrary.simpleMessage("/s"),
     "phoneNumber": MessageLookupByLibrary.simpleMessage("Phone Number"),
     "pleaseCompleteVerificationCode": MessageLookupByLibrary.simpleMessage(
       "Please complete the 6-digit verification code",
@@ -260,6 +285,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "studentLabel": MessageLookupByLibrary.simpleMessage("Student"),
     "subjects": MessageLookupByLibrary.simpleMessage("Subjects"),
     "subscribed": MessageLookupByLibrary.simpleMessage("Subscribed"),
+    "subscriptionEndedDownloadRemoved": MessageLookupByLibrary.simpleMessage(
+      "Your subscription to this subject ended, so the download was removed",
+    ),
     "syrianPhoneNumbersShouldBe10DigitsPleaseCheckAndTryAgain":
         MessageLookupByLibrary.simpleMessage(
           "Syrian phone numbers should be 10 digits, please check and try again",
@@ -281,6 +309,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "timeAgoMonths": m8,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("just now"),
     "timeAgoYears": m9,
+    "timeLeft": m10,
     "totalDuration": MessageLookupByLibrary.simpleMessage("Total time"),
     "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("Unsafe device"),
     "username": MessageLookupByLibrary.simpleMessage("Username"),
@@ -294,10 +323,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "Video is processing\nTry again shortly",
     ),
+    "waitingForNetwork": MessageLookupByLibrary.simpleMessage(
+      "Waiting for network",
+    ),
     "weakConnectionRetrying": MessageLookupByLibrary.simpleMessage(
       "Weak connection, retrying...",
     ),
-    "worksheetsWithCount": m10,
+    "worksheetsWithCount": m11,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "Your password must contain at least 8 characters including letters and numbers",
