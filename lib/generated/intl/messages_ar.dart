@@ -136,6 +136,7 @@ class MessageLookup extends MessageLookupByLibrary {
         ),
     "genericError": MessageLookupByLibrary.simpleMessage("حدث خطأ غير متوقع"),
     "gradeBac": MessageLookupByLibrary.simpleMessage("بكالوريا"),
+    "gradeEleven": MessageLookupByLibrary.simpleMessage("الصف الحادي عشر"),
     "gradeGeneral": MessageLookupByLibrary.simpleMessage("عام"),
     "gradeNine": MessageLookupByLibrary.simpleMessage("الصف التاسع"),
     "insufficientStorage": MessageLookupByLibrary.simpleMessage(

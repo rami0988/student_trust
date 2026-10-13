@@ -554,6 +554,11 @@ class S {
     return Intl.message('9th grade', name: 'gradeNine', desc: '', args: []);
   }
 
+  /// `11th grade`
+  String get gradeEleven {
+    return Intl.message('11th grade', name: 'gradeEleven', desc: '', args: []);
+  }
+
   /// `Baccalaureate`
   String get gradeBac {
     return Intl.message('Baccalaureate', name: 'gradeBac', desc: '', args: []);

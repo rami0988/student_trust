@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/utils/grade_labels.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../generated/l10n.dart';
@@ -83,7 +84,7 @@ class SubjectCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(AppTokens.rSM)),
                         child: Text(
-                          subject.grade!,
+                          gradeLabel(subject.grade),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600),

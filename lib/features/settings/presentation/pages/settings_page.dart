@@ -6,6 +6,7 @@ import '../../../../core/routing/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/breakpoints.dart';
+import '../../../../core/utils/grade_labels.dart';
 import '../../../../core/utils/local_storage_keys.dart';
 import '../../../../core/utils/shared_preferences_helper.dart';
 import '../../../../core/utils/utils.dart';
@@ -26,7 +27,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const String _supportEmail = 'edu285932@gmail.com';
-  static const String _appVersion = '1.0.3';
+  static const String _appVersion = '1.0.4';
 
   // AuthCubit is an app-wide @lazySingleton (see di.config.dart) — read
   // directly rather than closed on dispose, since closing it here would
@@ -184,14 +185,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  String _gradeLabel(String? grade) {
-    final String v = (grade ?? '').trim().toLowerCase();
-    if (v.isEmpty) return S.of(context).gradeGeneral;
-    if (v.contains('bac') || v.contains('بكالوريا')) return S.of(context).gradeBac;
-    // tase3 / grade9 / grade_9 … all map to the 9th grade.
-    return S.of(context).gradeNine;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -274,7 +267,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       _Chip(label: S.of(context).studentLabel, color: AppColors.primary),
-                      _Chip(label: _gradeLabel(user?.grade), color: AppColors.accent),
+                      _Chip(label: gradeLabel(user?.grade), color: AppColors.accent),
                       if (user != null && user.username.isNotEmpty)
                         Text('@${user.username}', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     ],

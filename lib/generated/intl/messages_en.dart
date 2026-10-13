@@ -140,6 +140,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "An unexpected error occurred",
     ),
     "gradeBac": MessageLookupByLibrary.simpleMessage("Baccalaureate"),
+    "gradeEleven": MessageLookupByLibrary.simpleMessage("11th grade"),
     "gradeGeneral": MessageLookupByLibrary.simpleMessage("General"),
     "gradeNine": MessageLookupByLibrary.simpleMessage("9th grade"),
     "insufficientStorage": MessageLookupByLibrary.simpleMessage(

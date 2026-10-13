@@ -232,3 +232,43 @@ Android release builds are still signed with the **debug** keystore
 (`com.edushield.edushield_student`) and `applicationId` (`com.edushield.student`) intentionally
 differ. Firebase is wired but **off** (`useFirebase = false` in both entry points) and the app
 runs fine without it.
+
+## Safety protocol (read first, applies to every task)
+
+**Regression prevention & logic protection.** Do not alter, delete, or break existing business logic,
+workflows, or working features unless the task explicitly asks for it. Every change must be
+backward-compatible: existing callers, API contracts (see "Data flow" above), and persisted data shapes
+keep working. This is stricter than it sounds in a Clean Architecture codebase — a change to a
+`RepositoryImpl` converter, a `built_value` state field, or a DI scope can silently break a feature that
+doesn't appear in your diff at all.
+
+**Pre/post implementation testing protocol.**
+1. **Pre-check** — before writing any code, run the commands below to confirm the baseline is healthy:
+   `flutter analyze` (must already be zero issues) and `flutter test` (must already be green). If the
+   baseline is red, say so and ask whether to fix it first or proceed anyway — don't silently absorb
+   pre-existing failures into your diff.
+2. **Implementation** — write unit/widget tests covering the new feature, its edge cases, and any bug
+   you fixed. Follow this repo's existing test conventions (`test/` mirrors `lib/`; see "Conventions" and
+   "Content protection" above for feature-specific gotchas — e.g. the offline-crypto key-namespace
+   isolation, native-download-engine task-id reuse, and emulator/jailbreak-detection caveats).
+3. **Post-check** — re-run `flutter analyze` (zero issues) and the **full** `flutter test` suite (not just
+   the new file) to confirm zero side effects elsewhere. Re-run codegen first if you touched anything it
+   covers (`dart run build_runner build --delete-conflicting-outputs` after `*_model`/`*_state`/`*_event`/
+   injectable/Hive-adapter edits; `dart run intl_utils:generate` after `lib/l10n/intl_*.arb` edits) —
+   stale generated code can pass analyze/test locally and still be wrong.
+
+**Minimal blast radius.** Touch only the files and lines the request actually needs. Don't refactor,
+reformat, or "clean up" untouched files or unrelated code paths in files you do touch — including files
+that `build_runner`/`intl_utils` regenerate as a side effect of an unrelated edit; if a codegen run
+rewrites files outside your task's scope, call that out rather than folding it silently into the diff.
+
+**Self-verification checklist**, before considering a task done:
+- [ ] Edge cases, null checks, and error handling match this repo's typed-`Failure` conventions (see
+      "Data flow" above) rather than ad hoc try/catch-and-swallow.
+- [ ] No temporary debug statements, stray `print()` (use `Logger`/`debugPrint` per existing convention —
+      `avoid_print` is linted), or unused imports remain.
+- [ ] `flutter analyze` is clean and the full `flutter test` suite is green (see post-check above).
+- [ ] Nothing in "Content protection", "Android / Gradle", or "Release notes" above was contradicted.
+
+**Project-specific commands** — see "Commands" above for the full, authoritative list including
+single-file/single-test invocations.
