@@ -313,7 +313,7 @@ class NativeDownloadEngine implements DownloadEngine {
         thumbnailUrl: r.thumbnailUrl,
       );
       await _forget(r.lessonId);
-      if (active.cancelRequested) return _finishCancelled(active);
+      if (active.cancelRequested) return await _finishCancelled(active);
       _finish(active, DownloadOutcome.completed);
     } catch (e) {
       await _forget(r.lessonId);

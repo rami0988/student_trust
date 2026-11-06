@@ -12,6 +12,14 @@ class AppNetworkImage extends StatelessWidget {
   final BorderRadiusGeometry? borderRadius;
   final Widget? errorWidget;
 
+  /// Extra request headers (BunnyCDN thumbnails need [BunnyConstants.cdnHeaders]).
+  final Map<String, String>? httpHeaders;
+
+  /// Disk/memory cache key; defaults to [url]. Signed URLs change their token
+  /// on a schedule, so pass a token-free key to avoid re-downloading the same
+  /// image every time the signature rotates.
+  final String? cacheKey;
+
   const AppNetworkImage({
     super.key,
     required this.url,
@@ -21,6 +29,8 @@ class AppNetworkImage extends StatelessWidget {
     this.shape = BoxShape.rectangle,
     this.borderRadius,
     this.errorWidget,
+    this.httpHeaders,
+    this.cacheKey,
   });
 
   @override
@@ -38,6 +48,8 @@ class AppNetworkImage extends StatelessWidget {
 
         final Widget image = CachedNetworkImage(
           imageUrl: url,
+          httpHeaders: httpHeaders,
+          cacheKey: cacheKey,
           width: width,
           height: height,
           fit: fit,

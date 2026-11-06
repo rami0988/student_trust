@@ -70,6 +70,12 @@ class _FakeRefreshAdapter implements HttpClientAdapter {
   /// 401s can pile up — without it they could serialize by luck and pass.
   Duration refreshDelay = const Duration(milliseconds: 50);
   bool refreshSucceeds = true;
+
+  /// Simulates the refresh never reaching the server (offline / timeout).
+  bool refreshNetworkError = false;
+
+  /// When set, the refresh answers this status (e.g. 503) instead.
+  int? refreshStatus;
   String issuedAccessToken = 'new-access-token';
   String? issuedRefreshToken = 'new-refresh-token';
 
@@ -82,6 +88,12 @@ class _FakeRefreshAdapter implements HttpClientAdapter {
     if (options.path.contains(Endpoints.refreshToken)) {
       refreshCallCount++;
       await Future<void>.delayed(refreshDelay);
+      if (refreshNetworkError) {
+        throw DioException.connectionError(requestOptions: options, reason: 'offline');
+      }
+      if (refreshStatus != null) {
+        return ResponseBody.fromString('{"error":"SERVER_ERROR"}', refreshStatus!);
+      }
       if (!refreshSucceeds) {
         return ResponseBody.fromString('{"error":"INVALID_REFRESH_TOKEN"}', 401);
       }
@@ -332,6 +344,46 @@ void main() {
 
       expect(response.statusCode, 200);
       expect(fired, isFalse);
+    });
+
+    // A weak connection must never log the student out: the player saves
+    // progress every 10s, and treating a timed-out refresh as a dead session
+    // wiped the credentials and threw the student out of a downloaded lesson.
+    test('does NOT end the session when the refresh hits a network error', () async {
+      refreshAdapter.refreshNetworkError = true;
+      bool fired = false;
+      final StreamSubscription<SessionExpiredEvent> sub = eventBus.on<SessionExpiredEvent>().listen((_) => fired = true);
+      addTearDown(sub.cancel);
+
+      await expectLater(dio.get<dynamic>('/student/subjects'), throwsA(isA<DioException>()));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(fired, isFalse);
+      expect(storage.store[LocalStorageKeys.refreshToken], 'valid-refresh-token');
+      expect(storage.store[LocalStorageKeys.accessToken], 'expired-access-token');
+    });
+
+    test('does NOT end the session when the refresh answers 5xx', () async {
+      refreshAdapter.refreshStatus = 503;
+      bool fired = false;
+      final StreamSubscription<SessionExpiredEvent> sub = eventBus.on<SessionExpiredEvent>().listen((_) => fired = true);
+      addTearDown(sub.cancel);
+
+      await expectLater(dio.get<dynamic>('/student/subjects'), throwsA(isA<DioException>()));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(fired, isFalse);
+      expect(storage.store[LocalStorageKeys.refreshToken], 'valid-refresh-token');
+    });
+
+    test('a transient refresh failure releases the latch for the next attempt', () async {
+      refreshAdapter.refreshNetworkError = true;
+      await dio.get<dynamic>('/student/subjects').catchError((_) => Response<dynamic>(requestOptions: RequestOptions(path: '/')));
+
+      refreshAdapter.refreshNetworkError = false;
+      await dio.get<dynamic>('/student/subjects');
+
+      expect(refreshAdapter.refreshCallCount, 2);
     });
 
     test('fires SessionExpiredEvent when no refresh token is stored', () async {

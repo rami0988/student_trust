@@ -54,6 +54,691 @@ class S {
     return Localizations.of<S>(context, S);
   }
 
+  /// `Playback speed`
+  String get playbackSpeed {
+    return Intl.message(
+      'Playback speed',
+      name: 'playbackSpeed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Normal`
+  String get speedNormal {
+    return Intl.message('Normal', name: 'speedNormal', desc: '', args: []);
+  }
+
+  /// `Reset zoom`
+  String get resetZoom {
+    return Intl.message('Reset zoom', name: 'resetZoom', desc: '', args: []);
+  }
+
+  /// `Play`
+  String get playVideo {
+    return Intl.message('Play', name: 'playVideo', desc: '', args: []);
+  }
+
+  /// `Pause`
+  String get pauseVideo {
+    return Intl.message('Pause', name: 'pauseVideo', desc: '', args: []);
+  }
+
+  /// `Lesson {current} of {total}`
+  String lessonOfCount(Object current, Object total) {
+    return Intl.message(
+      'Lesson $current of $total',
+      name: 'lessonOfCount',
+      desc: '',
+      args: [current, total],
+    );
+  }
+
+  /// `Watched`
+  String get watched {
+    return Intl.message('Watched', name: 'watched', desc: '', args: []);
+  }
+
+  /// `About this lesson`
+  String get aboutLesson {
+    return Intl.message(
+      'About this lesson',
+      name: 'aboutLesson',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Speed`
+  String get speedLabel {
+    return Intl.message('Speed', name: 'speedLabel', desc: '', args: []);
+  }
+
+  /// `Quality`
+  String get qualityLabel {
+    return Intl.message('Quality', name: 'qualityLabel', desc: '', args: []);
+  }
+
+  /// `Playback settings`
+  String get playbackSettings {
+    return Intl.message(
+      'Playback settings',
+      name: 'playbackSettings',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Saved for all lessons`
+  String get speedSavedForAll {
+    return Intl.message(
+      'Saved for all lessons',
+      name: 'speedSavedForAll',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Video quality`
+  String get videoQuality {
+    return Intl.message(
+      'Video quality',
+      name: 'videoQuality',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Default`
+  String get qualityDefaultTag {
+    return Intl.message(
+      'Default',
+      name: 'qualityDefaultTag',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `For very weak connections`
+  String get qualityLowDesc {
+    return Intl.message(
+      'For very weak connections',
+      name: 'qualityLowDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Data saver`
+  String get qualityDataSaverDesc {
+    return Intl.message(
+      'Data saver',
+      name: 'qualityDataSaverDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sharp board text`
+  String get qualityHighDesc {
+    return Intl.message(
+      'Sharp board text',
+      name: 'qualityHighDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Best on Wi-Fi`
+  String get qualityFullDesc {
+    return Intl.message(
+      'Best on Wi-Fi',
+      name: 'qualityFullDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Up next`
+  String get upNext {
+    return Intl.message('Up next', name: 'upNext', desc: '', args: []);
+  }
+
+  /// `Change`
+  String get change {
+    return Intl.message('Change', name: 'change', desc: '', args: []);
+  }
+
+  /// `At {speed}, you'll save {saved} on this lesson!`
+  String timeSavedFaster(Object speed, Object saved) {
+    return Intl.message(
+      'At $speed, you\'ll save $saved on this lesson!',
+      name: 'timeSavedFaster',
+      desc: '',
+      args: [speed, saved],
+    );
+  }
+
+  /// `Across the whole chapter you save {saved}.`
+  String timeSavedChapter(Object saved) {
+    return Intl.message(
+      'Across the whole chapter you save $saved.',
+      name: 'timeSavedChapter',
+      desc: '',
+      args: [saved],
+    );
+  }
+
+  /// `Normal speed: the lesson takes {duration}`
+  String timeSavedNormal(Object duration) {
+    return Intl.message(
+      'Normal speed: the lesson takes $duration',
+      name: 'timeSavedNormal',
+      desc: '',
+      args: [duration],
+    );
+  }
+
+  /// `Try {speed} to save {saved} while keeping it clear.`
+  String timeSavedTry(Object speed, Object saved) {
+    return Intl.message(
+      'Try $speed to save $saved while keeping it clear.',
+      name: 'timeSavedTry',
+      desc: '',
+      args: [speed, saved],
+    );
+  }
+
+  /// `Slower for deeper understanding: +{extra} to the lesson`
+  String timeSavedSlower(Object extra) {
+    return Intl.message(
+      'Slower for deeper understanding: +$extra to the lesson',
+      name: 'timeSavedSlower',
+      desc: '',
+      args: [extra],
+    );
+  }
+
+  /// `Good for worked examples and the hard parts.`
+  String get timeSavedSlowerHint {
+    return Intl.message(
+      'Good for worked examples and the hard parts.',
+      name: 'timeSavedSlowerHint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `At {speed} you save {saved} on this lesson`
+  String timeSavedPillFaster(Object speed, Object saved) {
+    return Intl.message(
+      'At $speed you save $saved on this lesson',
+      name: 'timeSavedPillFaster',
+      desc: '',
+      args: [speed, saved],
+    );
+  }
+
+  /// `Try {speed} and save {saved} on this lesson`
+  String timeSavedPillNormal(Object speed, Object saved) {
+    return Intl.message(
+      'Try $speed and save $saved on this lesson',
+      name: 'timeSavedPillNormal',
+      desc: '',
+      args: [speed, saved],
+    );
+  }
+
+  /// `At {speed}: +{extra} for deeper understanding`
+  String timeSavedPillSlower(Object speed, Object extra) {
+    return Intl.message(
+      'At $speed: +$extra for deeper understanding',
+      name: 'timeSavedPillSlower',
+      desc: '',
+      args: [speed, extra],
+    );
+  }
+
+  /// `{count, plural, one{1 hour} other{{count} hours}}`
+  String durationHours(num count) {
+    return Intl.plural(
+      count,
+      one: '1 hour',
+      other: '$count hours',
+      name: 'durationHours',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, one{1 minute} other{{count} minutes}}`
+  String durationMinutes(num count) {
+    return Intl.plural(
+      count,
+      one: '1 minute',
+      other: '$count minutes',
+      name: 'durationMinutes',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, one{1 second} other{{count} seconds}}`
+  String durationSeconds(num count) {
+    return Intl.plural(
+      count,
+      one: '1 second',
+      other: '$count seconds',
+      name: 'durationSeconds',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{first} {second}`
+  String durationJoin(Object first, Object second) {
+    return Intl.message(
+      '$first $second',
+      name: 'durationJoin',
+      desc: '',
+      args: [first, second],
+    );
+  }
+
+  /// `{time} left at {speed}`
+  String remainingAtSpeed(Object time, Object speed) {
+    return Intl.message(
+      '$time left at $speed',
+      name: 'remainingAtSpeed',
+      desc: '',
+      args: [time, speed],
+    );
+  }
+
+  /// `Back {seconds} seconds`
+  String skipBack(Object seconds) {
+    return Intl.message(
+      'Back $seconds seconds',
+      name: 'skipBack',
+      desc: '',
+      args: [seconds],
+    );
+  }
+
+  /// `Forward {seconds} seconds`
+  String skipForward(Object seconds) {
+    return Intl.message(
+      'Forward $seconds seconds',
+      name: 'skipForward',
+      desc: '',
+      args: [seconds],
+    );
+  }
+
+  /// `{seconds}s`
+  String secondsShort(Object seconds) {
+    return Intl.message(
+      '${seconds}s',
+      name: 'secondsShort',
+      desc: '',
+      args: [seconds],
+    );
+  }
+
+  /// `Pinch to zoom`
+  String get pinchToZoom {
+    return Intl.message(
+      'Pinch to zoom',
+      name: 'pinchToZoom',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Zoom`
+  String get zoomTitle {
+    return Intl.message('Zoom', name: 'zoomTitle', desc: '', args: []);
+  }
+
+  /// `Zoom mode`
+  String get zoomModeBadge {
+    return Intl.message('Zoom mode', name: 'zoomModeBadge', desc: '', args: []);
+  }
+
+  /// `Visible area`
+  String get zoomVisibleArea {
+    return Intl.message(
+      'Visible area',
+      name: 'zoomVisibleArea',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `View position`
+  String get zoomPosition {
+    return Intl.message(
+      'View position',
+      name: 'zoomPosition',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Whole frame`
+  String get zoomPosFull {
+    return Intl.message('Whole frame', name: 'zoomPosFull', desc: '', args: []);
+  }
+
+  /// `Center`
+  String get zoomPosCenter {
+    return Intl.message('Center', name: 'zoomPosCenter', desc: '', args: []);
+  }
+
+  /// `Left`
+  String get zoomPosLeft {
+    return Intl.message('Left', name: 'zoomPosLeft', desc: '', args: []);
+  }
+
+  /// `Right`
+  String get zoomPosRight {
+    return Intl.message('Right', name: 'zoomPosRight', desc: '', args: []);
+  }
+
+  /// `Top`
+  String get zoomPosTop {
+    return Intl.message('Top', name: 'zoomPosTop', desc: '', args: []);
+  }
+
+  /// `Bottom`
+  String get zoomPosBottom {
+    return Intl.message('Bottom', name: 'zoomPosBottom', desc: '', args: []);
+  }
+
+  /// `Pinch to zoom up to 4×`
+  String get zoomTipPinch {
+    return Intl.message(
+      'Pinch to zoom up to 4×',
+      name: 'zoomTipPinch',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Drag to move around`
+  String get zoomTipPan {
+    return Intl.message(
+      'Drag to move around',
+      name: 'zoomTipPan',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tap the map to jump`
+  String get zoomTipMap {
+    return Intl.message(
+      'Tap the map to jump',
+      name: 'zoomTipMap',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The watermark stays on top of the zoomed picture, so zooming can't hide it.`
+  String get zoomWatermarkNote {
+    return Intl.message(
+      'The watermark stays on top of the zoomed picture, so zooming can\'t hide it.',
+      name: 'zoomWatermarkNote',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You are here`
+  String get zoomYourPosition {
+    return Intl.message(
+      'You are here',
+      name: 'zoomYourPosition',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Zoom in`
+  String get zoomIn {
+    return Intl.message('Zoom in', name: 'zoomIn', desc: '', args: []);
+  }
+
+  /// `Zoom out`
+  String get zoomOut {
+    return Intl.message('Zoom out', name: 'zoomOut', desc: '', args: []);
+  }
+
+  /// `Attempt {attempt} of {max}`
+  String retryAttempt(Object attempt, Object max) {
+    return Intl.message(
+      'Attempt $attempt of $max',
+      name: 'retryAttempt',
+      desc: '',
+      args: [attempt, max],
+    );
+  }
+
+  /// `in {seconds}s`
+  String retryInSeconds(Object seconds) {
+    return Intl.message(
+      'in ${seconds}s',
+      name: 'retryInSeconds',
+      desc: '',
+      args: [seconds],
+    );
+  }
+
+  /// `Retrying now`
+  String get retryingNow {
+    return Intl.message(
+      'Retrying now',
+      name: 'retryingNow',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Resumes at {time}`
+  String resumeFrom(Object time) {
+    return Intl.message(
+      'Resumes at $time',
+      name: 'resumeFrom',
+      desc: '',
+      args: [time],
+    );
+  }
+
+  /// `Couldn't play the video`
+  String get cannotPlayVideo {
+    return Intl.message(
+      'Couldn\'t play the video',
+      name: 'cannotPlayVideo',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Continue where you left off`
+  String get continueWhereLeft {
+    return Intl.message(
+      'Continue where you left off',
+      name: 'continueWhereLeft',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Start the chapter`
+  String get startChapter {
+    return Intl.message(
+      'Start the chapter',
+      name: 'startChapter',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Watch again`
+  String get watchAgain {
+    return Intl.message('Watch again', name: 'watchAgain', desc: '', args: []);
+  }
+
+  /// `done`
+  String get chapterDone {
+    return Intl.message('done', name: 'chapterDone', desc: '', args: []);
+  }
+
+  /// `{count, plural, one{1 lesson} other{{count} lessons}}`
+  String lessonsCount(num count) {
+    return Intl.plural(
+      count,
+      one: '1 lesson',
+      other: '$count lessons',
+      name: 'lessonsCount',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count} completed`
+  String completedCount(Object count) {
+    return Intl.message(
+      '$count completed',
+      name: 'completedCount',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `All`
+  String get filterAll {
+    return Intl.message('All', name: 'filterAll', desc: '', args: []);
+  }
+
+  /// `In progress`
+  String get filterInProgress {
+    return Intl.message(
+      'In progress',
+      name: 'filterInProgress',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Completed`
+  String get filterCompleted {
+    return Intl.message(
+      'Completed',
+      name: 'filterCompleted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Saved`
+  String get filterDownloaded {
+    return Intl.message('Saved', name: 'filterDownloaded', desc: '', args: []);
+  }
+
+  /// `{count, plural, one{1 lesson available offline} other{{count} lessons available offline}}`
+  String offlineSummary(num count) {
+    return Intl.plural(
+      count,
+      one: '1 lesson available offline',
+      other: '$count lessons available offline',
+      name: 'offlineSummary',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Encrypted on this device · re-checked every 7 days`
+  String get offlineSummarySub {
+    return Intl.message(
+      'Encrypted on this device · re-checked every 7 days',
+      name: 'offlineSummarySub',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{minutes} min left`
+  String minutesLeft(Object minutes) {
+    return Intl.message(
+      '$minutes min left',
+      name: 'minutesLeft',
+      desc: '',
+      args: [minutes],
+    );
+  }
+
+  /// `New`
+  String get newLesson {
+    return Intl.message('New', name: 'newLesson', desc: '', args: []);
+  }
+
+  /// `Downloading · {percent}%`
+  String downloadingPercent(Object percent) {
+    return Intl.message(
+      'Downloading · $percent%',
+      name: 'downloadingPercent',
+      desc: '',
+      args: [percent],
+    );
+  }
+
+  /// `Paused · {percent}%`
+  String downloadPausedPercent(Object percent) {
+    return Intl.message(
+      'Paused · $percent%',
+      name: 'downloadPausedPercent',
+      desc: '',
+      args: [percent],
+    );
+  }
+
+  /// `Saved`
+  String get savedOffline {
+    return Intl.message('Saved', name: 'savedOffline', desc: '', args: []);
+  }
+
+  /// `No lessons in this filter`
+  String get noLessonsInFilter {
+    return Intl.message(
+      'No lessons in this filter',
+      name: 'noLessonsInFilter',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{hours}h {minutes}m`
+  String hoursMinutesShort(Object hours, Object minutes) {
+    return Intl.message(
+      '${hours}h ${minutes}m',
+      name: 'hoursMinutesShort',
+      desc: '',
+      args: [hours, minutes],
+    );
+  }
+
+  /// `{minutes}m`
+  String minutesShort(Object minutes) {
+    return Intl.message(
+      '${minutes}m',
+      name: 'minutesShort',
+      desc: '',
+      args: [minutes],
+    );
+  }
+
   /// `Please enter your email`
   String get PleaseEnterEmail {
     return Intl.message(

@@ -15,15 +15,35 @@ class RouteTracker extends NavigatorObserver {
   /// route (e.g. a dialog pushed without `RouteSettings`).
   String? get currentRouteName => _currentRouteName;
 
+  // Dialogs, bottom sheets and menus (PopupRoute) sit OVER a screen without
+  // replacing it, so they never change the answer. Tracking them made the
+  // player's own quality/speed sheet (an unnamed popup) read as "not on the
+  // video player", and a connectivity change at that moment threw the student
+  // out of the lesson to the offline/home screen.
   @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) => _currentRouteName = route.settings.name;
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PopupRoute) return;
+    _currentRouteName = route.settings.name;
+  }
 
   @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) => _currentRouteName = newRoute?.settings.name;
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (newRoute is PopupRoute) return;
+    _currentRouteName = newRoute?.settings.name;
+  }
 
   @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => _currentRouteName = previousRoute?.settings.name;
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PopupRoute) return;
+    _currentRouteName = _screenName(previousRoute);
+  }
 
   @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) => _currentRouteName = previousRoute?.settings.name;
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PopupRoute) return;
+    _currentRouteName = _screenName(previousRoute);
+  }
+
+  /// A popup is never the "screen" — fall back to unknown rather than its name.
+  String? _screenName(Route<dynamic>? route) => route is PopupRoute ? null : route?.settings.name;
 }

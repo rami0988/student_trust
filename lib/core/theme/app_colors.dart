@@ -37,6 +37,22 @@ class AppColors {
   static const Color shimmerHighlight = Color(0xFFF7F8FC);
   static const Color black = Colors.black;
 
+  // ── Player (always dark, independent of the app theme) ───────
+  static const Color playerBg = Color(0xFF05080F);
+  static const Color playerSurface = Color(0xFF0D1420);
+  static const Color playerSurface2 = Color(0xFF142033);
+  static const Color playerLine = Color(0x14FFFFFF); // white 8%
+  static const Color playerInk = Color(0xFFF8FAFC);
+  static const Color playerInk2 = Color(0xADF8FAFC); // 68%
+  static const Color playerInk3 = Color(0x6BF8FAFC); // 42%
+  static const Color glass = Color(0x7A0A101C); // translucent overlay fill (48%)
+  static const Color glassStrong = Color(0xB80A101C); // 72%
+  static const Color glassLine = Color(0x24FFFFFF); // white 14%
+  static const Color accentLight = Color(0xFFF27A3F);
+  static const Color successBright = Color(0xFF4ADE80); // success on dark
+  static const Color warningBright = Color(0xFFFBBF24); // warning on dark
+  static const Color errorBright = Color(0xFFF87171); // error on dark
+
   /// Soft tinted fill used behind icons/badges (primary at 10%).
   static Color get primarySoft => primary.withValues(alpha: 0.10);
   static Color get accentSoft => accent.withValues(alpha: 0.12);

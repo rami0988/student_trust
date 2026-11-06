@@ -56,4 +56,12 @@ class BunnyConstants {
   static const Map<String, String> cdnHeaders = {
     'Referer': 'https://iframe.mediadelivery.net/',
   };
+
+  /// Cache key for a signed BunnyCDN URL with the token segment removed.
+  ///
+  /// Signed URLs look like `https://host/bcdn_token=…&expires=…&token_path=…/<id>/thumbnail.jpg`
+  /// and the backend re-signs thumbnails every couple of hours, so keying the
+  /// image cache on the full URL re-downloaded every thumbnail after each
+  /// rotation. The token-free form is stable for the same file.
+  static String stableCacheKey(String url) => url.replaceFirst(RegExp(r'/bcdn_token=[^/]*'), '');
 }

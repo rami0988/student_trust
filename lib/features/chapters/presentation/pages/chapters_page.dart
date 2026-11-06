@@ -73,7 +73,10 @@ class ChaptersPage extends StatelessWidget {
                                 number: index + 1,
                                 onTap: () => Navigator.of(
                                   context,
-                                ).pushNamed(Routes.lessons, arguments: LessonsArgs(chapterId: chapter.id, chapterTitle: chapter.title)),
+                                ).pushNamed(
+                                  Routes.lessons,
+                                  arguments: LessonsArgs(chapterId: chapter.id, chapterTitle: chapter.title, subjectName: args.subjectName),
+                                ),
                                 onWorksheetsTap: () => Navigator.of(
                                   context,
                                 ).pushNamed(Routes.worksheets, arguments: WorksheetsArgs(chapterId: chapter.id, chapterTitle: chapter.title)),

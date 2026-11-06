@@ -20,40 +20,106 @@ typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 class MessageLookup extends MessageLookupByLibrary {
   String get localeName => 'ar';
 
-  static String m0(count) => "${count} فيديو محفوظ";
+  static String m0(count) => "${count} مكتمل";
 
-  static String m1(count) => "تم حذف ${count} درساً";
+  static String m1(percent) => "متوقف مؤقتًا · ${percent}%";
 
-  static String m2(count) => "${count} ملف";
+  static String m2(percent) => "جارٍ التنزيل · ${percent}%";
 
-  static String m3(shown, total) => "عرض ${shown} من ${total}";
+  static String m3(count) => "${count} فيديو محفوظ";
 
-  static String m4(count) => "${count} فيديو حل";
+  static String m4(count) => "تم حذف ${count} درساً";
 
   static String m5(count) =>
-      "${Intl.plural(count, one: 'منذ يوم', two: 'منذ يومين', few: 'منذ ${count} أيام', many: 'منذ ${count} يوم', other: 'منذ ${count} يوم')}";
+      "${Intl.plural(count, zero: '0 ساعة', one: 'ساعة', two: 'ساعتين', few: '${count} ساعات', many: '${count} ساعة', other: '${count} ساعة')}";
 
-  static String m6(count) =>
-      "${Intl.plural(count, one: 'منذ ساعة', two: 'منذ ساعتين', few: 'منذ ${count} ساعات', many: 'منذ ${count} ساعة', other: 'منذ ${count} ساعة')}";
+  static String m6(first, second) => "${first} و${second}";
 
   static String m7(count) =>
-      "${Intl.plural(count, one: 'منذ دقيقة', two: 'منذ دقيقتين', few: 'منذ ${count} دقائق', many: 'منذ ${count} دقيقة', other: 'منذ ${count} دقيقة')}";
+      "${Intl.plural(count, zero: '0 دقيقة', one: 'دقيقة واحدة', two: 'دقيقتين', few: '${count} دقائق', many: '${count} دقيقة', other: '${count} دقيقة')}";
 
   static String m8(count) =>
+      "${Intl.plural(count, zero: '0 ثانية', one: 'ثانية واحدة', two: 'ثانيتين', few: '${count} ثوانٍ', many: '${count} ثانية', other: '${count} ثانية')}";
+
+  static String m9(count) => "${count} ملف";
+
+  static String m10(hours, minutes) => "${hours} س ${minutes} د";
+
+  static String m11(current, total) => "الدرس ${current} من ${total}";
+
+  static String m12(count) =>
+      "${Intl.plural(count, zero: 'لا دروس', one: 'درس واحد', two: 'درسان', few: '${count} دروس', many: '${count} درسًا', other: '${count} درس')}";
+
+  static String m13(minutes) => "متبقٍ ${minutes} د";
+
+  static String m14(minutes) => "${minutes} د";
+
+  static String m15(count) =>
+      "${Intl.plural(count, zero: 'لا دروس متاحة دون اتصال', one: 'درس واحد متاح دون اتصال', two: 'درسان متاحان دون اتصال', few: '${count} دروس متاحة دون اتصال', many: '${count} درسًا متاحًا دون اتصال', other: '${count} درس متاح دون اتصال')}";
+
+  static String m16(time, speed) => "متبقٍ ${time} بسرعة ${speed}";
+
+  static String m17(time) => "سيُستأنف من ${time}";
+
+  static String m18(attempt, max) => "المحاولة ${attempt} من ${max}";
+
+  static String m19(seconds) => "خلال ${seconds} ث";
+
+  static String m20(seconds) => "${seconds} ث";
+
+  static String m21(shown, total) => "عرض ${shown} من ${total}";
+
+  static String m22(seconds) => "رجوع ${seconds} ثوانٍ";
+
+  static String m23(seconds) => "تقديم ${seconds} ثوانٍ";
+
+  static String m24(count) => "${count} فيديو حل";
+
+  static String m25(count) =>
+      "${Intl.plural(count, one: 'منذ يوم', two: 'منذ يومين', few: 'منذ ${count} أيام', many: 'منذ ${count} يوم', other: 'منذ ${count} يوم')}";
+
+  static String m26(count) =>
+      "${Intl.plural(count, one: 'منذ ساعة', two: 'منذ ساعتين', few: 'منذ ${count} ساعات', many: 'منذ ${count} ساعة', other: 'منذ ${count} ساعة')}";
+
+  static String m27(count) =>
+      "${Intl.plural(count, one: 'منذ دقيقة', two: 'منذ دقيقتين', few: 'منذ ${count} دقائق', many: 'منذ ${count} دقيقة', other: 'منذ ${count} دقيقة')}";
+
+  static String m28(count) =>
       "${Intl.plural(count, one: 'منذ شهر', two: 'منذ شهرين', few: 'منذ ${count} أشهر', many: 'منذ ${count} شهر', other: 'منذ ${count} شهر')}";
 
-  static String m9(count) =>
+  static String m29(count) =>
       "${Intl.plural(count, one: 'منذ سنة', two: 'منذ سنتين', few: 'منذ ${count} سنوات', many: 'منذ ${count} سنة', other: 'منذ ${count} سنة')}";
 
-  static String m10(time) => "متبقٍ ${time}";
+  static String m30(time) => "متبقٍ ${time}";
 
-  static String m11(count) => "أوراق العمل (${count})";
+  static String m31(saved) => "وعلى مستوى الفصل كاملًا توفّر ${saved}.";
+
+  static String m32(speed, saved) =>
+      "عند المشاهدة بسرعة ${speed}، ستوفّر ${saved} من هذا الدرس!";
+
+  static String m33(duration) => "السرعة العادية: مدة الدرس ${duration}";
+
+  static String m34(speed, saved) =>
+      "بسرعة ${speed} توفّر ${saved} من هذا الدرس";
+
+  static String m35(speed, saved) =>
+      "جرّب ${speed} ووفّر ${saved} من هذا الدرس";
+
+  static String m36(speed, extra) => "بسرعة ${speed}: +${extra} لفهم أعمق";
+
+  static String m37(extra) => "سرعة أبطأ لفهم أعمق: +${extra} على مدة الدرس";
+
+  static String m38(speed, saved) =>
+      "جرّب ${speed} لتوفّر ${saved} مع بقاء الشرح واضحًا.";
+
+  static String m39(count) => "أوراق العمل (${count})";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
     "PleaseEnterEmail": MessageLookupByLibrary.simpleMessage(
       "الرجاء إدخال بريدك الإلكتروني",
     ),
+    "aboutLesson": MessageLookupByLibrary.simpleMessage("عن هذا الدرس"),
     "appName": MessageLookupByLibrary.simpleMessage("ثقة"),
     "appTheme": MessageLookupByLibrary.simpleMessage("المظهر"),
     "appVersion": MessageLookupByLibrary.simpleMessage("إصدار التطبيق"),
@@ -63,12 +129,21 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "back": MessageLookupByLibrary.simpleMessage("رجوع"),
     "cancelDownload": MessageLookupByLibrary.simpleMessage("إلغاء التحميل"),
+    "cannotPlayVideo": MessageLookupByLibrary.simpleMessage(
+      "تعذّر تشغيل الفيديو",
+    ),
+    "change": MessageLookupByLibrary.simpleMessage("تغيير"),
+    "chapterDone": MessageLookupByLibrary.simpleMessage("منجز"),
     "chapters": MessageLookupByLibrary.simpleMessage("الفصول"),
     "comingSoon": MessageLookupByLibrary.simpleMessage("قريباً"),
     "completed": MessageLookupByLibrary.simpleMessage("مكتمل"),
+    "completedCount": m0,
     "contactUs": MessageLookupByLibrary.simpleMessage("تواصل معنا"),
     "contactUsMessage": MessageLookupByLibrary.simpleMessage(
       "راسلنا على البريد التالي وسنعود إليك في أقرب وقت:",
+    ),
+    "continueWhereLeft": MessageLookupByLibrary.simpleMessage(
+      "تابِع من حيث توقفت",
     ),
     "copy": MessageLookupByLibrary.simpleMessage("نسخ"),
     "delete": MessageLookupByLibrary.simpleMessage("حذف"),
@@ -106,14 +181,20 @@ class MessageLookup extends MessageLookupByLibrary {
     "downloadLocked": MessageLookupByLibrary.simpleMessage(
       "مقفل — اتصل بالإنترنت مرة للتحقق من الاشتراك",
     ),
+    "downloadPausedPercent": m1,
     "downloadToDeviceTooltip": MessageLookupByLibrary.simpleMessage(
       "تحميل إلى الجهاز",
     ),
     "downloaded": MessageLookupByLibrary.simpleMessage("تم التحميل"),
-    "downloadsCount": m0,
-    "downloadsDeleted": m1,
+    "downloadingPercent": m2,
+    "downloadsCount": m3,
+    "downloadsDeleted": m4,
     "downloadsInProgress": MessageLookupByLibrary.simpleMessage("قيد التحميل"),
     "downloadsTitle": MessageLookupByLibrary.simpleMessage("التحميلات"),
+    "durationHours": m5,
+    "durationJoin": m6,
+    "durationMinutes": m7,
+    "durationSeconds": m8,
     "emailCopied": MessageLookupByLibrary.simpleMessage("تم نسخ البريد"),
     "emailFormatNotCorrect": MessageLookupByLibrary.simpleMessage(
       "صيغة البريد الإلكتروني غير صحيحة",
@@ -128,8 +209,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "فشل في تحميل البيانات المحفوظة، يرجى المحاولة مجدداً",
     ),
     "fieldIsRequired": MessageLookupByLibrary.simpleMessage("هذا الحقل مطلوب"),
-    "filesCount": m2,
+    "filesCount": m9,
     "filesSectionTitle": MessageLookupByLibrary.simpleMessage("الملفات"),
+    "filterAll": MessageLookupByLibrary.simpleMessage("الكل"),
+    "filterCompleted": MessageLookupByLibrary.simpleMessage("مكتملة"),
+    "filterDownloaded": MessageLookupByLibrary.simpleMessage("المحفوظة"),
+    "filterInProgress": MessageLookupByLibrary.simpleMessage("قيد المشاهدة"),
     "fullNameCanOnlyContainLettersOrSpaces":
         MessageLookupByLibrary.simpleMessage(
           "الاسم الكامل يمكن أن يحتوي على أحرف ومسافات فقط",
@@ -139,11 +224,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "gradeEleven": MessageLookupByLibrary.simpleMessage("الصف الحادي عشر"),
     "gradeGeneral": MessageLookupByLibrary.simpleMessage("عام"),
     "gradeNine": MessageLookupByLibrary.simpleMessage("الصف التاسع"),
+    "hoursMinutesShort": m10,
     "insufficientStorage": MessageLookupByLibrary.simpleMessage(
       "لا توجد مساحة كافية على الجهاز — حرّر مساحة ثم استأنف التحميل",
     ),
     "language": MessageLookupByLibrary.simpleMessage("اللغة"),
+    "lessonOfCount": m11,
     "lessons": MessageLookupByLibrary.simpleMessage("الدروس"),
+    "lessonsCount": m12,
     "loginButton": MessageLookupByLibrary.simpleMessage("دخول"),
     "loginSubtitle": MessageLookupByLibrary.simpleMessage("نلتقي في القمة"),
     "logout": MessageLookupByLibrary.simpleMessage("تسجيل الخروج"),
@@ -154,6 +242,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "mediaCorrupted": MessageLookupByLibrary.simpleMessage(
       "الملف المحمّل تالف وتم حذفه — أعد تنزيل الدرس",
     ),
+    "minutesLeft": m13,
+    "minutesShort": m14,
     "myDownloads": MessageLookupByLibrary.simpleMessage("تحميلاتي"),
     "networkErrorSubtitle": MessageLookupByLibrary.simpleMessage(
       "يبدو أن الاتصال بالإنترنت غير متوفر. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
@@ -161,6 +251,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "networkErrorTitle": MessageLookupByLibrary.simpleMessage(
       "لا يوجد اتصال بالإنترنت",
     ),
+    "newLesson": MessageLookupByLibrary.simpleMessage("جديد"),
     "noChapters": MessageLookupByLibrary.simpleMessage("لا توجد فصول متاحة"),
     "noDownloadedVideos": MessageLookupByLibrary.simpleMessage(
       "لا توجد فيديوهات محمّلة",
@@ -170,6 +261,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "noFiles": MessageLookupByLibrary.simpleMessage("لا توجد ملفات"),
     "noLessons": MessageLookupByLibrary.simpleMessage("لا توجد دروس متاحة"),
+    "noLessonsInFilter": MessageLookupByLibrary.simpleMessage(
+      "لا توجد دروس في هذا التصنيف",
+    ),
     "noSearchResults": MessageLookupByLibrary.simpleMessage(
       "لا توجد مواد مطابقة للبحث",
     ),
@@ -195,6 +289,10 @@ class MessageLookup extends MessageLookupByLibrary {
       "أنت غير متصل بالإنترنت — يتم عرض التحميلات فقط",
     ),
     "offlineIndicator": MessageLookupByLibrary.simpleMessage("غير متصل"),
+    "offlineSummary": m15,
+    "offlineSummarySub": MessageLookupByLibrary.simpleMessage(
+      "مشفّرة على هذا الجهاز · تحقّق تلقائي كل 7 أيام",
+    ),
     "oopsSomethingWentWrongPleaseTryAgain":
         MessageLookupByLibrary.simpleMessage(
           "عذراً! حدث خطأ ما. يرجى المحاولة مجدداً",
@@ -211,9 +309,16 @@ class MessageLookup extends MessageLookupByLibrary {
       "كلمتا المرور غير متطابقتين",
     ),
     "pauseDownload": MessageLookupByLibrary.simpleMessage("إيقاف مؤقت"),
+    "pauseVideo": MessageLookupByLibrary.simpleMessage("إيقاف مؤقت"),
     "pdfDisplayError": MessageLookupByLibrary.simpleMessage("تعذّر عرض الملف"),
     "perSecond": MessageLookupByLibrary.simpleMessage("/ث"),
     "phoneNumber": MessageLookupByLibrary.simpleMessage("رقم الهاتف"),
+    "pinchToZoom": MessageLookupByLibrary.simpleMessage(
+      "قرِّب بإصبعين للتكبير",
+    ),
+    "playVideo": MessageLookupByLibrary.simpleMessage("تشغيل"),
+    "playbackSettings": MessageLookupByLibrary.simpleMessage("إعدادات التشغيل"),
+    "playbackSpeed": MessageLookupByLibrary.simpleMessage("سرعة التشغيل"),
     "pleaseCompleteVerificationCode": MessageLookupByLibrary.simpleMessage(
       "الرجاء إكمال رمز التحقق المكون من 6 أرقام",
     ),
@@ -235,16 +340,39 @@ class MessageLookup extends MessageLookupByLibrary {
     "pleaseEnterYourFullName": MessageLookupByLibrary.simpleMessage(
       "الرجاء إدخال اسمك الكامل",
     ),
+    "qualityDataSaverDesc": MessageLookupByLibrary.simpleMessage(
+      "موفّر للبيانات",
+    ),
+    "qualityDefaultTag": MessageLookupByLibrary.simpleMessage("الافتراضي"),
+    "qualityFullDesc": MessageLookupByLibrary.simpleMessage(
+      "يُنصح به على Wi-Fi",
+    ),
+    "qualityHighDesc": MessageLookupByLibrary.simpleMessage(
+      "وضوح عالٍ للسبّورة",
+    ),
+    "qualityLabel": MessageLookupByLibrary.simpleMessage("الجودة"),
+    "qualityLowDesc": MessageLookupByLibrary.simpleMessage(
+      "للاتصال الضعيف جدًا",
+    ),
     "queuedDownload": MessageLookupByLibrary.simpleMessage("بانتظار الدور"),
     "recordingDetected": MessageLookupByLibrary.simpleMessage(
       "تم رصد تسجيل الشاشة\nأوقف تطبيق التسجيل للمتابعة",
     ),
+    "remainingAtSpeed": m16,
+    "resetZoom": MessageLookupByLibrary.simpleMessage("إلغاء التكبير"),
     "resumeDownload": MessageLookupByLibrary.simpleMessage("استئناف"),
+    "resumeFrom": m17,
     "retry": MessageLookupByLibrary.simpleMessage("إعادة المحاولة"),
+    "retryAttempt": m18,
     "retryConnection": MessageLookupByLibrary.simpleMessage(
       "إعادة المحاولة للاتصال",
     ),
     "retryDownload": MessageLookupByLibrary.simpleMessage("إعادة المحاولة"),
+    "retryInSeconds": m19,
+    "retryingNow": MessageLookupByLibrary.simpleMessage(
+      "جارٍ إعادة المحاولة الآن",
+    ),
+    "savedOffline": MessageLookupByLibrary.simpleMessage("محفوظ"),
     "savedToDownloads": MessageLookupByLibrary.simpleMessage(
       "تم حفظ الملف في مجلد التنزيلات",
     ),
@@ -252,6 +380,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "searchSubjectHint": MessageLookupByLibrary.simpleMessage(
       "ابحث عن مادة...",
     ),
+    "secondsShort": m20,
     "selectCountry": MessageLookupByLibrary.simpleMessage("اختر الدولة"),
     "serverErrorOccurredPleaseTryAgain": MessageLookupByLibrary.simpleMessage(
       "حدث خطأ في الخادم، يرجى المحاولة مجدداً لاحقاً",
@@ -269,12 +398,20 @@ class MessageLookup extends MessageLookupByLibrary {
     "settingsSupportSection": MessageLookupByLibrary.simpleMessage("الدعم"),
     "showLess": MessageLookupByLibrary.simpleMessage("عرض أقل"),
     "showMore": MessageLookupByLibrary.simpleMessage("عرض المزيد"),
-    "showingOfTotal": m3,
-    "solutionVideosCount": m4,
+    "showingOfTotal": m21,
+    "skipBack": m22,
+    "skipForward": m23,
+    "solutionVideosCount": m24,
     "solutionsSectionTitle": MessageLookupByLibrary.simpleMessage("شرح وحل"),
     "somethingWentWrong": MessageLookupByLibrary.simpleMessage(
       "عفواً! حدث خطأ ما",
     ),
+    "speedLabel": MessageLookupByLibrary.simpleMessage("السرعة"),
+    "speedNormal": MessageLookupByLibrary.simpleMessage("عادية"),
+    "speedSavedForAll": MessageLookupByLibrary.simpleMessage(
+      "تُحفظ لكل الدروس",
+    ),
+    "startChapter": MessageLookupByLibrary.simpleMessage("ابدأ الفصل"),
     "stillOffline": MessageLookupByLibrary.simpleMessage(
       "ما زلت غير متصل بالإنترنت",
     ),
@@ -300,15 +437,27 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage(
           "هناك مشكلة بالاتصال بالشبكة الرجاء إعادة المحاولة لاحقاً",
         ),
-    "timeAgoDays": m5,
-    "timeAgoHours": m6,
-    "timeAgoMinutes": m7,
-    "timeAgoMonths": m8,
+    "timeAgoDays": m25,
+    "timeAgoHours": m26,
+    "timeAgoMinutes": m27,
+    "timeAgoMonths": m28,
     "timeAgoNow": MessageLookupByLibrary.simpleMessage("الآن"),
-    "timeAgoYears": m9,
-    "timeLeft": m10,
+    "timeAgoYears": m29,
+    "timeLeft": m30,
+    "timeSavedChapter": m31,
+    "timeSavedFaster": m32,
+    "timeSavedNormal": m33,
+    "timeSavedPillFaster": m34,
+    "timeSavedPillNormal": m35,
+    "timeSavedPillSlower": m36,
+    "timeSavedSlower": m37,
+    "timeSavedSlowerHint": MessageLookupByLibrary.simpleMessage(
+      "مناسبة للمسائل المحلولة والأجزاء الصعبة.",
+    ),
+    "timeSavedTry": m38,
     "totalDuration": MessageLookupByLibrary.simpleMessage("المدة الإجمالية"),
     "unsafeDeviceTitle": MessageLookupByLibrary.simpleMessage("جهاز غير آمن"),
+    "upNext": MessageLookupByLibrary.simpleMessage("التالي"),
     "username": MessageLookupByLibrary.simpleMessage("اسم المستخدم"),
     "usernameRequired": MessageLookupByLibrary.simpleMessage(
       "اسم المستخدم مطلوب",
@@ -320,16 +469,40 @@ class MessageLookup extends MessageLookupByLibrary {
     "videoProcessingMessage": MessageLookupByLibrary.simpleMessage(
       "الفيديو قيد المعالجة\nحاول مرة أخرى بعد قليل",
     ),
+    "videoQuality": MessageLookupByLibrary.simpleMessage("جودة الفيديو"),
     "waitingForNetwork": MessageLookupByLibrary.simpleMessage(
       "بانتظار الاتصال بالإنترنت",
     ),
+    "watchAgain": MessageLookupByLibrary.simpleMessage("أعد المشاهدة"),
+    "watched": MessageLookupByLibrary.simpleMessage("شاهدت"),
     "weakConnectionRetrying": MessageLookupByLibrary.simpleMessage(
       "ضعف في الاتصال، جاري إعادة المحاولة...",
     ),
-    "worksheetsWithCount": m11,
+    "worksheetsWithCount": m39,
     "yourPasswordMustContainAtLeast8CharactersIncludingLettersAndNumbers":
         MessageLookupByLibrary.simpleMessage(
           "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل تشمل حروفاً وأرقاماً",
         ),
+    "zoomIn": MessageLookupByLibrary.simpleMessage("تكبير"),
+    "zoomModeBadge": MessageLookupByLibrary.simpleMessage("وضع التكبير"),
+    "zoomOut": MessageLookupByLibrary.simpleMessage("تصغير"),
+    "zoomPosBottom": MessageLookupByLibrary.simpleMessage("أسفل"),
+    "zoomPosCenter": MessageLookupByLibrary.simpleMessage("المنتصف"),
+    "zoomPosFull": MessageLookupByLibrary.simpleMessage("الإطار كاملًا"),
+    "zoomPosLeft": MessageLookupByLibrary.simpleMessage("يسار"),
+    "zoomPosRight": MessageLookupByLibrary.simpleMessage("يمين"),
+    "zoomPosTop": MessageLookupByLibrary.simpleMessage("أعلى"),
+    "zoomPosition": MessageLookupByLibrary.simpleMessage("موضع العرض"),
+    "zoomTipMap": MessageLookupByLibrary.simpleMessage("انقر الخريطة للانتقال"),
+    "zoomTipPan": MessageLookupByLibrary.simpleMessage("اسحب لتحريك الصورة"),
+    "zoomTipPinch": MessageLookupByLibrary.simpleMessage(
+      "إصبعان للتكبير حتى 4 أضعاف",
+    ),
+    "zoomTitle": MessageLookupByLibrary.simpleMessage("التكبير"),
+    "zoomVisibleArea": MessageLookupByLibrary.simpleMessage("المساحة الظاهرة"),
+    "zoomWatermarkNote": MessageLookupByLibrary.simpleMessage(
+      "العلامة المائية ثابتة فوق الصورة المكبّرة، فلا يمكن إخفاؤها بالتكبير.",
+    ),
+    "zoomYourPosition": MessageLookupByLibrary.simpleMessage("موضعك"),
   };
 }

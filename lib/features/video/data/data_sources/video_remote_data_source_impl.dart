@@ -41,6 +41,8 @@ class VideoRemoteDataSourceImpl implements VideoRemoteDataSource {
           isBunny: true,
           thumbnailUrl: data['thumbnailUrl']?.toString(),
           expiresAt: data['expiresAt']?.toString(),
+          resolution: data['resolution']?.toString(),
+          renditions: VideoStreamInfoModel.parseRenditions(data['renditions']),
         );
       }
 

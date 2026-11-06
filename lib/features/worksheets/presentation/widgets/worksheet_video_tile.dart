@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/network/endpoints.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/duration_utils.dart';
@@ -34,14 +35,14 @@ class WorksheetVideoTile extends StatelessWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        // NOTE(migration): Bunny's pull zone Referer allow-list
-                        // means a plain AppNetworkImage (no custom headers)
-                        // will 403 here — same caveat as OLD app's cached
-                        // network image usage. AppNetworkImage doesn't support
-                        // custom headers yet; revisit once BunnyConstants
-                        // .cdnHeaders needs to be threaded through.
+                        // Bunny's pull zone Referer allow-list 403s a thumbnail
+                        // request without the embed Referer.
                         if (video.thumbnailUrl != null && video.thumbnailUrl!.isNotEmpty)
-                          AppNetworkImage(url: video.thumbnailUrl!)
+                          AppNetworkImage(
+                            url: video.thumbnailUrl!,
+                            httpHeaders: BunnyConstants.cdnHeaders,
+                            cacheKey: BunnyConstants.stableCacheKey(video.thumbnailUrl!),
+                          )
                         else
                           const DecoratedBox(decoration: BoxDecoration(gradient: AppTokens.brandGradient)),
                         DecoratedBox(

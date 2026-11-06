@@ -50,7 +50,7 @@ class TokenRefreshInterceptor extends Interceptor {
   );
 
   /// Non-null only while a refresh is in flight. Concurrent 401s await it.
-  static Completer<String?>? _inFlight;
+  static Completer<_RefreshResult>? _inFlight;
 
   /// Visible for tests — clears the shared single-flight latch between cases.
   static void resetForTest() => _inFlight = null;
@@ -86,8 +86,18 @@ class TokenRefreshInterceptor extends Interceptor {
       return handler.next(err);
     }
 
-    final String? newAccessToken = await _refreshOnce();
+    final _RefreshResult result = await _refreshOnce();
 
+    if (result.isTransient) {
+      // The refresh never got a verdict from the server (no connection,
+      // timeout, 5xx). That says nothing about the session — treating it as
+      // "dead" is what logged students out and threw them out of a
+      // downloaded lesson mid-playback on a weak connection (the player saves
+      // progress every 10s). Keep the credentials; the next request retries.
+      return handler.next(err);
+    }
+
+    final String? newAccessToken = result.accessToken;
     if (newAccessToken == null || newAccessToken.isEmpty) {
       // Refresh genuinely failed (expired/rotated/revoked refresh token, or
       // the account was deactivated). This is the only path that ends the
@@ -116,25 +126,38 @@ class TokenRefreshInterceptor extends Interceptor {
     }
   }
 
-  /// Runs at most one refresh at a time. Returns the new access token, or
-  /// null when the session is genuinely over.
-  Future<String?> _refreshOnce() {
-    final Completer<String?>? existing = _inFlight;
+  /// Runs at most one refresh at a time. Resolves to the new access token, to
+  /// "session over" (null token) when the server definitively rejected the
+  /// refresh, or to [_RefreshResult.transient] when no verdict was reached.
+  Future<_RefreshResult> _refreshOnce() {
+    final Completer<_RefreshResult>? existing = _inFlight;
     if (existing != null) return existing.future;
 
-    final Completer<String?> completer = Completer<String?>();
+    final Completer<_RefreshResult> completer = Completer<_RefreshResult>();
     _inFlight = completer;
 
     // Never let the latch outlive the attempt, or every later 401 would await
     // a Completer that can no longer complete and hang forever.
     unawaited(
       _performRefresh()
-          .then(completer.complete)
-          .catchError((_) => completer.complete(null))
+          .then((String? token) => completer.complete(_RefreshResult(token)))
+          .catchError(
+            (Object error) =>
+                completer.complete(_isDefinitiveRejection(error) ? const _RefreshResult(null) : _RefreshResult.transient),
+          )
           .whenComplete(() => _inFlight = null),
     );
 
     return completer.future;
+  }
+
+  /// Only a 4xx answer from `/auth/refresh` (expired, rotated, revoked token,
+  /// or ACCOUNT_INACTIVE) means the session is over. No response at all
+  /// (offline, timeout, DNS) or a 5xx is the network/server, not the session.
+  static bool _isDefinitiveRejection(Object error) {
+    if (error is! DioException) return false;
+    final int? status = error.response?.statusCode;
+    return status != null && status >= 400 && status < 500;
   }
 
   Future<String?> _performRefresh() async {
@@ -192,4 +215,18 @@ class TokenRefreshInterceptor extends Interceptor {
 
   /// Marks a replayed request so a second 401 can't start another cycle.
   static const String _retriedFlag = 'token_refresh_retried';
+}
+
+/// Outcome of one refresh attempt, shared by every 401 awaiting it.
+class _RefreshResult {
+  /// The new access token; null/empty means the session is over.
+  final String? accessToken;
+
+  /// True when the refresh never reached a verdict (offline, timeout, 5xx).
+  final bool isTransient;
+
+  const _RefreshResult(this.accessToken) : isTransient = false;
+  const _RefreshResult._transient() : accessToken = null, isTransient = true;
+
+  static const _RefreshResult transient = _RefreshResult._transient();
 }

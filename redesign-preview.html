@@ -1,0 +1,1711 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ثقة — معاينة التصميم</title>
+<meta name="description" content="Redesign prototype of the Thiqa student app: lessons list, video player (zoom, speed, quality), and connection/error states.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   DESIGN TOKENS — mirror lib/core/theme/app_colors.dart + app_tokens.dart
+   ===================================================================== */
+:root {
+  /* Brand (ثقة) */
+  --brand-700: #14568C;
+  --brand-600: #1C74B9;   /* AppColors.primary */
+  --brand-500: #4983C3;   /* primaryLight */
+  --brand-400: #4D9DD8;   /* gradientEnd */
+  --accent-600: #E65A1F;  /* brand orange */
+  --accent-500: #F27A3F;
+
+  /* Semantic */
+  --success: #16A34A;
+  --warning: #D97706;
+  --error:   #DC2626;
+  --info:    #0284C7;
+
+  /* Surfaces & ink (light) */
+  --bg:        #F6F7FB;
+  --surface:   #FFFFFF;
+  --surface-2: #F3F4F9;
+  --surface-3: #EBEDF5;
+  --ink-1: #111827;
+  --ink-2: #6B7280;
+  --ink-3: #9CA3AF;
+  --line:  #E5E7EB;
+  --brand-soft:   rgba(28,116,185,.10);
+  --accent-soft:  rgba(230,90,31,.12);
+  --success-soft: rgba(22,163,74,.10);
+  --warning-soft: rgba(217,119,6,.12);
+  --error-soft:   rgba(220,38,38,.10);
+  --brand-ink: var(--brand-600);
+
+  /* Canvas around the device frames */
+  --canvas: #E9ECF4;
+  --canvas-ink: #1F2937;
+
+  /* Spacing (AppTokens.s*) */
+  --s4: 4px; --s8: 8px; --s12: 12px; --s16: 16px; --s20: 20px; --s24: 24px; --s32: 32px; --s40: 40px;
+  /* Radius (AppTokens.r*) */
+  --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 24px; --r-full: 999px;
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.04), 0 2px 8px rgba(17,24,39,.05);
+  --shadow-md: 0 4px 12px rgba(17,24,39,.06), 0 12px 32px rgba(17,24,39,.08);
+  --shadow-brand: 0 10px 30px rgba(28,116,185,.35);
+  /* Motion (AppTokens.d*) */
+  --d-fast: 150ms; --d-med: 250ms; --d-slow: 400ms;
+  --ease: cubic-bezier(.215,.61,.355,1);           /* easeOutCubic */
+  --ease-emph: cubic-bezier(.2,0,0,1);
+
+  --grad-brand: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-400) 100%);
+  --grad-hero: linear-gradient(140deg, #123E66 0%, var(--brand-600) 55%, var(--brand-400) 100%);
+  --grad-accent: linear-gradient(135deg, var(--accent-600), var(--accent-500));
+
+  /* Player (always dark) */
+  --player-bg: #05080F;
+  --player-surface: #0D1420;
+  --player-surface-2: #142033;
+  --player-line: rgba(255,255,255,.08);
+  --player-ink-1: #F8FAFC;
+  --player-ink-2: rgba(248,250,252,.68);
+  --player-ink-3: rgba(248,250,252,.42);
+  --glass: rgba(10,16,28,.48);
+  --glass-strong: rgba(10,16,28,.72);
+  --glass-line: rgba(255,255,255,.14);
+
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A0F1A; --surface: #111827; --surface-2: #172031; --surface-3: #1E293B;
+    --ink-1: #F3F4F6; --ink-2: #A3ACBB; --ink-3: #6B7686; --line: #233044;
+    --brand-soft: rgba(77,157,216,.14); --accent-soft: rgba(242,122,63,.16);
+    --success-soft: rgba(34,197,94,.14); --warning-soft: rgba(245,158,11,.16); --error-soft: rgba(239,68,68,.16);
+    --brand-ink: var(--brand-400);
+    --canvas: #05070C; --canvas-ink: #E5E7EB;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow-md: 0 8px 28px rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0A0F1A; --surface: #111827; --surface-2: #172031; --surface-3: #1E293B;
+  --ink-1: #F3F4F6; --ink-2: #A3ACBB; --ink-3: #6B7686; --line: #233044;
+  --brand-soft: rgba(77,157,216,.14); --accent-soft: rgba(242,122,63,.16);
+  --success-soft: rgba(34,197,94,.14); --warning-soft: rgba(245,158,11,.16); --error-soft: rgba(239,68,68,.16);
+  --brand-ink: var(--brand-400);
+  --canvas: #05070C; --canvas-ink: #E5E7EB;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow-md: 0 8px 28px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+
+/* =====================================================================
+   BASE
+   ===================================================================== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--canvas); }
+body {
+  font-family: 'Cairo', system-ui, sans-serif;
+  color: var(--canvas-ink);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+.icon { display: inline-flex; width: 20px; height: 20px; flex: none; }
+.icon svg { width: 100%; height: 100%; fill: currentColor; }
+.icon--sm { width: 14px; height: 14px; }
+.icon--md { width: 18px; height: 18px; }
+.icon--lg { width: 28px; height: 28px; }
+.icon--xl { width: 36px; height: 36px; }
+.flip-rtl { transform: scaleX(-1); }
+.ltr { direction: ltr; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--brand-400); outline-offset: 2px; }
+
+/* =====================================================================
+   CANVAS (presentation only — not part of the app UI)
+   ===================================================================== */
+.canvas-header {
+  max-width: 1400px; margin: 0 auto; padding: 32px 16px 8px;
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;
+}
+.canvas-header__brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  width: 44px; height: 44px; border-radius: 14px; background: var(--grad-brand);
+  display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 18px; box-shadow: var(--shadow-brand);
+}
+.canvas-header h1 { font-size: 22px; font-weight: 800; line-height: 1.3; }
+.canvas-header p { font-size: 13px; opacity: .65; }
+.theme-toggle {
+  display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--r-full);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+}
+.theme-toggle button {
+  padding: 6px 14px; border-radius: var(--r-full); font-size: 13px; font-weight: 600; color: var(--ink-2);
+  transition: background var(--d-med) var(--ease), color var(--d-med) var(--ease);
+}
+.theme-toggle button[aria-pressed="true"] { background: var(--brand-600); color: #fff; }
+
+.canvas {
+  max-width: 1400px; margin: 0 auto; padding: 24px 16px 64px;
+  display: flex; flex-wrap: wrap; gap: 48px 40px; justify-content: center; align-items: flex-start;
+}
+.frame { display: flex; flex-direction: column; gap: 12px; max-width: 100%; }
+.frame__label { display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; }
+.frame__label span { font-size: 12px; font-weight: 500; opacity: .55; }
+.frame--wide { width: 100%; align-items: center; }
+.frame--wide .frame__scroller { max-width: 100%; overflow-x: auto; padding-bottom: 8px; }
+
+/* =====================================================================
+   DEVICE
+   ===================================================================== */
+.device {
+  width: 390px; max-width: calc(100vw - 32px); height: 844px;
+  border-radius: 48px; overflow: hidden; position: relative;
+  background: var(--bg); color: var(--ink-1);
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 10px #0B0F17, 0 30px 80px rgba(15,23,42,.28);
+  display: flex; flex-direction: column;
+}
+.device--player { background: var(--player-bg); color: var(--player-ink-1); border-color: #000; }
+.device--landscape { width: 844px; max-width: none; height: 390px; }
+.status-bar {
+  height: 48px; flex: none; padding: 0 30px; display: flex; align-items: center; justify-content: space-between;
+  font-size: 14px; font-weight: 700; direction: ltr;
+}
+.status-bar__icons { display: flex; gap: 6px; align-items: center; }
+.status-bar__battery { width: 24px; height: 11px; border-radius: 3px; border: 1.5px solid currentColor; position: relative; opacity: .9; }
+.status-bar__battery::after { content: ''; position: absolute; inset: 1.5px; right: 5px; background: currentColor; border-radius: 1px; }
+.device-body { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative; }
+.device-body::-webkit-scrollbar { display: none; }
+.home-indicator { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: currentColor; opacity: .25; z-index: 20; }
+
+/* =====================================================================
+   SHARED COMPONENTS
+   ===================================================================== */
+.icon-btn {
+  width: 40px; height: 40px; border-radius: var(--r-md); display: grid; place-items: center; flex: none;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-1);
+  transition: transform var(--d-fast) var(--ease), background var(--d-med) var(--ease);
+}
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn:active { transform: scale(.94); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px;
+  border-radius: var(--r-full); font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.badge--success { background: var(--success-soft); color: var(--success); }
+.badge--brand   { background: var(--brand-soft);   color: var(--brand-ink); }
+.badge--accent  { background: var(--accent-soft);  color: var(--accent-600); }
+.badge--warning { background: var(--warning-soft); color: var(--warning); }
+.badge--error   { background: var(--error-soft);   color: var(--error); }
+.badge--neutral { background: var(--surface-2);    color: var(--ink-2); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 48px; padding: 0 20px; border-radius: var(--r-md); font-weight: 700; font-size: 14px;
+  transition: transform var(--d-fast) var(--ease), box-shadow var(--d-med) var(--ease), background var(--d-med) var(--ease);
+}
+.btn:active { transform: scale(.97); }
+.btn--primary { background: var(--grad-brand); color: #fff; box-shadow: var(--shadow-brand); }
+.btn--light { background: rgba(255,255,255,.95); color: var(--brand-700); }
+.btn--ghost { background: rgba(255,255,255,.08); color: var(--player-ink-1); border: 1px solid var(--player-line); }
+.btn--block { width: 100%; }
+
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid var(--glass-line);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* =====================================================================
+   FRAME 1 — LESSONS LIST
+   ===================================================================== */
+.app-bar { display: flex; align-items: center; gap: 12px; padding: 4px 16px 12px; }
+.app-bar__titles { flex: 1; min-width: 0; }
+.app-bar__eyebrow { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.app-bar__title { font-size: 20px; font-weight: 800; line-height: 1.3; }
+
+.chapter-hero {
+  margin: 0 16px; padding: 20px; border-radius: var(--r-xl); color: #fff; position: relative; overflow: hidden;
+  background: var(--grad-hero); box-shadow: var(--shadow-brand);
+}
+.chapter-hero::before, .chapter-hero::after {
+  content: ''; position: absolute; border-radius: 50%; pointer-events: none;
+}
+.chapter-hero::before { width: 220px; height: 220px; inset-inline-start: -80px; top: -110px; background: radial-gradient(circle, rgba(255,255,255,.22), transparent 70%); }
+.chapter-hero::after  { width: 160px; height: 160px; inset-inline-end: -50px; bottom: -70px; background: radial-gradient(circle, rgba(230,90,31,.45), transparent 70%); }
+.chapter-hero__top { display: flex; gap: 16px; align-items: center; position: relative; z-index: 1; }
+.chapter-hero__text { flex: 1; min-width: 0; }
+.chapter-hero__chip { display: inline-flex; padding: 2px 10px; border-radius: var(--r-full); background: rgba(255,255,255,.18); font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+.chapter-hero__title { font-size: 19px; font-weight: 800; line-height: 1.35; }
+.chapter-hero__stats { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; opacity: .85; }
+.progress-ring { width: 68px; height: 68px; position: relative; flex: none; }
+.progress-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.progress-ring__value { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 800; font-size: 16px; }
+.progress-ring__value small { display: block; font-size: 9px; font-weight: 600; opacity: .8; margin-top: -6px; text-align: center; }
+.chapter-hero__resume {
+  position: relative; z-index: 1; margin-top: 16px; display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 12px; border-radius: var(--r-lg); background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.2);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); text-align: start; color: #fff;
+  transition: background var(--d-med) var(--ease);
+}
+.chapter-hero__resume:hover { background: rgba(255,255,255,.22); }
+.chapter-hero__resume-play { width: 40px; height: 40px; border-radius: 50%; background: #fff; color: var(--brand-600); display: grid; place-items: center; flex: none; }
+.chapter-hero__resume-text { flex: 1; min-width: 0; font-size: 12px; opacity: .85; }
+.chapter-hero__resume-text strong { display: block; font-size: 14px; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.filter-row { display: flex; gap: 8px; padding: 16px 16px 4px; overflow-x: auto; scrollbar-width: none; }
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-chip {
+  height: 36px; padding: 0 14px; border-radius: var(--r-full); white-space: nowrap; font-size: 13px; font-weight: 700;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px;
+  transition: all var(--d-med) var(--ease);
+}
+.filter-chip__count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-full); background: var(--surface-2); font-size: 11px; display: grid; place-items: center; }
+.filter-chip[aria-pressed="true"] { background: var(--ink-1); border-color: var(--ink-1); color: var(--bg); }
+.filter-chip[aria-pressed="true"] .filter-chip__count { background: rgba(255,255,255,.2); color: inherit; }
+
+.offline-summary {
+  margin: 12px 16px 4px; padding: 10px 12px; border-radius: var(--r-md); display: flex; gap: 10px; align-items: center;
+  background: var(--success-soft); color: var(--success); font-size: 12px; font-weight: 600;
+}
+.offline-summary span { color: var(--ink-2); font-weight: 500; }
+
+.section-title { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 16px 8px; }
+.section-title h2 { font-size: 15px; font-weight: 800; }
+.section-title span { font-size: 12px; color: var(--ink-3); }
+
+.lesson-list { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 40px; }
+.lesson-card {
+  display: flex; gap: 12px; padding: 10px; border-radius: var(--r-lg); align-items: stretch;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+  transition: transform var(--d-med) var(--ease), box-shadow var(--d-med) var(--ease), border-color var(--d-med) var(--ease);
+  animation: rise var(--d-slow) var(--ease) both;
+}
+.lesson-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.lesson-card--active { border-color: color-mix(in srgb, var(--brand-600) 45%, transparent); box-shadow: 0 0 0 3px var(--brand-soft), var(--shadow-sm); }
+.lesson-card__thumb {
+  width: 104px; flex: none; border-radius: var(--r-md); position: relative; overflow: hidden; align-self: flex-start; aspect-ratio: 4 / 3.2;
+  background: var(--grad-brand);
+}
+.lesson-card__thumb::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.lesson-card__thumb-num { position: absolute; inset-inline-start: 8px; top: 2px; font-size: 30px; font-weight: 800; color: rgba(255,255,255,.28); line-height: 1.2; }
+.lesson-card__thumb-play {
+  position: absolute; inset: 0; margin: auto; width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.92); color: var(--brand-600); display: grid; place-items: center; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.lesson-card__thumb-duration {
+  position: absolute; bottom: 6px; inset-inline-end: 6px; padding: 0 6px; height: 18px; border-radius: 6px;
+  background: rgba(5,8,15,.7); color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; direction: ltr;
+}
+.lesson-card__thumb-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,.3); }
+.lesson-card__thumb-progress i { position: absolute; inset-block: 0; inset-inline-start: 0; background: var(--accent-600); border-radius: 0 2px 2px 0; }
+.lesson-card__thumb--alt1 { background: linear-gradient(135deg, #0F4C81, #2F86C9); }
+.lesson-card__thumb--alt2 { background: linear-gradient(135deg, #3B3F9E, #5C7BD9); }
+.lesson-card__thumb--alt3 { background: linear-gradient(135deg, #0E6E6E, #2BA3A3); }
+.lesson-card__thumb--alt4 { background: linear-gradient(135deg, #8A3A12, #E65A1F); }
+.lesson-card__thumb--alt5 { background: linear-gradient(135deg, #374151, #6B7280); }
+
+.lesson-card__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding-top: 2px; }
+.lesson-card__title { font-size: 14px; font-weight: 700; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lesson-card__desc { font-size: 12px; color: var(--ink-2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lesson-card__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; padding-top: 4px; font-size: 11px; color: var(--ink-3); }
+.lesson-card__dl-status { font-size: 11px; color: var(--ink-2); font-weight: 600; }
+.lesson-card__dl-bar { height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; margin-top: 2px; }
+.lesson-card__dl-bar i { display: block; height: 100%; background: var(--grad-brand); border-radius: 2px; }
+.lesson-card__action { display: flex; align-items: center; flex: none; }
+
+/* Download control — one component, five states */
+.dl {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; position: relative; flex: none;
+  transition: transform var(--d-fast) var(--ease), background var(--d-med) var(--ease);
+}
+.dl:active { transform: scale(.92); }
+.dl--idle    { background: var(--brand-soft); color: var(--brand-ink); }
+.dl--idle:hover { background: var(--brand-600); color: #fff; }
+.dl--done    { background: var(--success-soft); color: var(--success); }
+.dl--failed  { background: var(--error-soft); color: var(--error); }
+.dl--waiting { background: var(--warning-soft); color: var(--warning); }
+.dl--waiting::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 2px dashed currentColor; opacity: .5; animation: spin 6s linear infinite; }
+.dl--progress { color: var(--brand-ink); }
+.dl--progress svg.dl__ring { position: absolute; inset: 0; width: 40px; height: 40px; transform: rotate(-90deg); }
+
+/* =====================================================================
+   PLAYER
+   ===================================================================== */
+.player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; flex: none; isolation: isolate; }
+.player--fill { aspect-ratio: auto; height: 100%; }
+.player__viewport { position: absolute; inset: 0; overflow: hidden; }
+.player__zoom-layer, [data-scene-mini] { direction: ltr; }
+.player__zoom-layer { position: absolute; inset: 0; transform-origin: 74% 62%; transition: transform var(--d-slow) var(--ease-emph); }
+.player__zoom-layer svg { width: 100%; height: 100%; display: block; }
+.player__scrim { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, transparent 28%, transparent 58%, rgba(0,0,0,.72) 100%); }
+.player__watermark {
+  position: absolute; pointer-events: none; color: rgba(255,255,255,.16); font-size: 11px; font-weight: 700; white-space: nowrap;
+  transform: rotate(-14deg); direction: ltr; letter-spacing: .3px; z-index: 3;
+}
+.player__topbar { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 5; direction: ltr; }
+.player__tools { display: flex; gap: 6px; align-items: center; }
+.p-btn {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  transition: transform var(--d-fast) var(--ease), background var(--d-med) var(--ease);
+}
+.p-btn:hover { background: var(--glass-strong); }
+.p-btn:active { transform: scale(.9); }
+.p-chip {
+  height: 36px; padding: 0 12px; border-radius: var(--r-full); display: inline-flex; align-items: center; gap: 4px;
+  color: #fff; font-size: 12.5px; font-weight: 800; direction: ltr;
+  transition: background var(--d-med) var(--ease), transform var(--d-fast) var(--ease);
+}
+.p-chip:hover { background: var(--glass-strong); }
+.p-chip:active { transform: scale(.95); }
+.p-chip--hd sup { font-size: 8px; padding: 1px 3px; border-radius: 3px; background: var(--accent-600); margin-inline-start: 2px; }
+
+.player__center { position: absolute; inset: 0; bottom: 40px; display: flex; align-items: center; justify-content: center; z-index: 4; direction: ltr; pointer-events: none; }
+.player__center > * { pointer-events: auto; }
+.p-play {
+  width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  transition: transform var(--d-fast) var(--ease);
+}
+.p-play:active { transform: scale(.92); }
+
+.player__bottom { position: absolute; left: 12px; right: 12px; bottom: 8px; z-index: 5; direction: ltr; display: flex; flex-direction: column; gap: 4px; }
+.player__controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.player__controls-group { display: flex; align-items: center; gap: 6px; }
+.player__time { font-size: 11.5px; font-weight: 700; color: rgba(255,255,255,.92); margin-left: 4px; white-space: nowrap; }
+.player__time span { opacity: .6; }
+.player__remaining {
+  height: 26px; padding: 0 10px; border-radius: var(--r-full); display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,.85); white-space: nowrap;
+}
+.player__remaining b { color: var(--accent-500); font-weight: 800; }
+
+/* Skip ±10s — pill buttons with the step printed on them (touch target ≥ 36px) */
+.skip-btn {
+  height: 34px; min-width: 58px; padding: 0 10px; border-radius: var(--r-full); display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  color: #fff; font-size: 12.5px; font-weight: 800; position: relative; overflow: hidden;
+  transition: transform var(--d-fast) var(--ease), background var(--d-med) var(--ease);
+}
+.skip-btn:hover { background: var(--glass-strong); }
+.skip-btn:active { transform: scale(.92); }
+.skip-btn__label { font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+.skip-btn--lg { height: 40px; min-width: 68px; font-size: 13.5px; }
+.skip-btn.is-pulsing::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: rgba(77,157,216,.45); animation: skipPulse var(--d-slow) var(--ease) forwards; }
+@keyframes skipPulse { from { opacity: 1; transform: scale(.6); } to { opacity: 0; transform: scale(1.4); } }
+
+/* Double-tap style feedback flash on the side of the frame that was skipped */
+.skip-ripple {
+  position: absolute; top: 0; bottom: 0; width: 38%; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px;
+  color: #fff; font-size: 13px; font-weight: 800; pointer-events: none; opacity: 0; direction: ltr;
+  transition: opacity var(--d-med) var(--ease);
+}
+.skip-ripple--back { left: 0; border-radius: 0 50% 50% 0 / 0 50% 50% 0; background: radial-gradient(circle at 0 50%, rgba(255,255,255,.18), transparent 70%); }
+.skip-ripple--fwd  { right: 0; border-radius: 50% 0 0 50% / 50% 0 0 50%; background: radial-gradient(circle at 100% 50%, rgba(255,255,255,.18), transparent 70%); }
+.skip-ripple.is-visible { opacity: 1; }
+.timeline { position: relative; height: 16px; display: flex; align-items: center; cursor: pointer; }
+.timeline__track { position: absolute; left: 0; right: 0; height: 4px; border-radius: 2px; background: rgba(255,255,255,.22); overflow: hidden; transition: height var(--d-fast) var(--ease); }
+.timeline:hover .timeline__track { height: 6px; }
+.timeline__buffered { position: absolute; inset-block: 0; left: 0; background: rgba(255,255,255,.38); }
+.timeline__played { position: absolute; inset-block: 0; left: 0; background: linear-gradient(90deg, var(--brand-400), var(--brand-600)); }
+.timeline__tick { position: absolute; width: 2px; top: 0; bottom: 0; background: rgba(0,0,0,.55); }
+.timeline__thumb { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; transform: translateX(-50%); box-shadow: 0 0 0 4px rgba(28,116,185,.35), 0 2px 6px rgba(0,0,0,.4); }
+
+.player__hint {
+  position: absolute; top: 54px; right: 12px; z-index: 5;
+  height: 28px; padding: 0 12px; border-radius: var(--r-full); display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; animation: rise var(--d-slow) var(--ease) both .6s;
+}
+
+/* Lesson info panel (below the player) */
+.lesson-info { padding: 18px 16px 48px; display: flex; flex-direction: column; gap: 16px; }
+.lesson-info__eyebrow { font-size: 12px; color: var(--player-ink-3); font-weight: 600; }
+.lesson-info__title { font-size: 20px; font-weight: 800; line-height: 1.35; }
+.lesson-info__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.info-chip {
+  height: 28px; padding: 0 10px; border-radius: var(--r-full); display: inline-flex; align-items: center; gap: 6px;
+  background: var(--player-surface-2); color: var(--player-ink-2); font-size: 12px; font-weight: 600; border: 1px solid var(--player-line);
+}
+.info-chip--success { color: #4ADE80; background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.2); }
+.watch-progress { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--player-ink-2); }
+.watch-progress__bar { flex: 1; height: 6px; border-radius: 3px; background: var(--player-surface-2); overflow: hidden; }
+.watch-progress__bar i { display: block; height: 100%; background: var(--grad-accent); border-radius: 3px; }
+
+/* Time-saved indicator — full card (sheet) and compact pill (lesson info) */
+.time-saved {
+  margin-top: 12px; padding: 12px 14px; border-radius: var(--r-lg); display: flex; flex-direction: column; gap: 10px;
+  background: linear-gradient(135deg, rgba(34,197,94,.12), rgba(77,157,216,.10)); border: 1px solid rgba(74,222,128,.22);
+  transition: background var(--d-med) var(--ease), border-color var(--d-med) var(--ease);
+}
+.time-saved--slower { background: linear-gradient(135deg, rgba(230,90,31,.14), rgba(77,157,216,.08)); border-color: rgba(242,122,63,.28); }
+.time-saved--normal { background: var(--player-bg); border-color: var(--player-line); }
+.time-saved__head { display: flex; gap: 10px; align-items: flex-start; }
+.time-saved__icon { width: 34px; height: 34px; border-radius: var(--r-sm); display: grid; place-items: center; flex: none; background: rgba(74,222,128,.16); color: #4ADE80; }
+.time-saved--slower .time-saved__icon { background: rgba(242,122,63,.16); color: var(--accent-500); }
+.time-saved--normal .time-saved__icon { background: rgba(77,157,216,.14); color: var(--brand-400); }
+.time-saved__title { font-size: 13px; font-weight: 800; line-height: 1.6; }
+.time-saved__title strong { color: #4ADE80; }
+.time-saved--slower .time-saved__title strong { color: var(--accent-500); }
+.time-saved__sub { font-size: 11.5px; color: var(--player-ink-2); line-height: 1.55; }
+.time-saved__meter { display: flex; flex-direction: column; gap: 6px; direction: ltr; }
+.time-saved__row { display: grid; grid-template-columns: 40px 1fr 44px; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; color: var(--player-ink-2); }
+.time-saved__row span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.time-saved__bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.06); overflow: hidden; }
+.time-saved__bar i { display: block; height: 100%; border-radius: 4px; background: rgba(255,255,255,.28); transition: width var(--d-slow) var(--ease-emph); }
+.time-saved__bar--speed i { background: var(--grad-brand); }
+.time-saved--slower .time-saved__bar--speed i { background: var(--grad-accent); }
+
+.time-saved-pill {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-md); width: 100%; text-align: start;
+  background: linear-gradient(135deg, rgba(34,197,94,.12), rgba(77,157,216,.08)); border: 1px solid rgba(74,222,128,.2);
+  transition: border-color var(--d-med) var(--ease), transform var(--d-fast) var(--ease);
+}
+.time-saved-pill:hover { border-color: rgba(74,222,128,.45); }
+.time-saved-pill:active { transform: scale(.98); }
+.time-saved-pill.time-saved--slower { background: linear-gradient(135deg, rgba(230,90,31,.14), rgba(77,157,216,.06)); border-color: rgba(242,122,63,.28); }
+.time-saved-pill.time-saved--normal { background: var(--player-surface); border-color: var(--player-line); }
+.time-saved-pill__text { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 700; line-height: 1.55; }
+.time-saved-pill__text strong { color: #4ADE80; }
+.time-saved--slower .time-saved-pill__text strong { color: var(--accent-500); }
+.time-saved-pill__cta { font-size: 11.5px; font-weight: 800; color: var(--brand-400); white-space: nowrap; }
+
+.desc-card { padding: 14px 16px; border-radius: var(--r-lg); background: var(--player-surface); border: 1px solid var(--player-line); }
+.desc-card h3 { font-size: 13px; font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.desc-card p { font-size: 13.5px; line-height: 1.85; color: var(--player-ink-2); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.desc-card.is-open p { -webkit-line-clamp: unset; line-clamp: unset; }
+.desc-card__toggle { margin-top: 6px; font-size: 12.5px; font-weight: 700; color: var(--brand-400); }
+.desc-card__points { display: none; margin-top: 10px; gap: 6px; flex-direction: column; }
+.desc-card.is-open .desc-card__points { display: flex; }
+.desc-card__point { display: flex; gap: 8px; font-size: 12.5px; color: var(--player-ink-2); }
+.desc-card__point::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-600); margin-top: 8px; flex: none; }
+
+.quick-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.quick-setting {
+  display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: var(--r-lg); text-align: start;
+  background: var(--player-surface); border: 1px solid var(--player-line); transition: border-color var(--d-med) var(--ease), background var(--d-med) var(--ease);
+}
+.quick-setting:hover { border-color: rgba(77,157,216,.5); background: var(--player-surface-2); }
+.quick-setting__icon { width: 36px; height: 36px; border-radius: var(--r-sm); display: grid; place-items: center; background: rgba(77,157,216,.14); color: var(--brand-400); flex: none; }
+.quick-setting__text { font-size: 11px; color: var(--player-ink-3); line-height: 1.3; }
+.quick-setting__text strong { display: block; color: var(--player-ink-1); font-size: 14px; direction: ltr; unicode-bidi: isolate; text-align: right; }
+
+.up-next h3 { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+.up-next__item { display: flex; gap: 12px; align-items: center; padding: 8px; border-radius: var(--r-md); transition: background var(--d-med) var(--ease); }
+.up-next__item:hover { background: var(--player-surface); }
+.up-next__thumb { width: 72px; aspect-ratio: 16/10; border-radius: var(--r-sm); background: linear-gradient(135deg, #3B3F9E, #5C7BD9); position: relative; flex: none; }
+.up-next__thumb span { position: absolute; bottom: 4px; inset-inline-end: 4px; font-size: 9.5px; font-weight: 700; padding: 0 4px; border-radius: 4px; background: rgba(0,0,0,.6); direction: ltr; }
+.up-next__text { flex: 1; min-width: 0; font-size: 12px; color: var(--player-ink-3); }
+.up-next__text strong { display: block; color: var(--player-ink-1); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* =====================================================================
+   BOTTOM SHEET (speed + quality)
+   ===================================================================== */
+.sheet-scrim { position: absolute; inset: 0; background: rgba(2,4,10,.6); z-index: 10; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 11; padding: 10px 16px 32px;
+  background: var(--player-surface); border-radius: 28px 28px 0 0; border-top: 1px solid var(--player-line);
+  box-shadow: 0 -20px 60px rgba(0,0,0,.5); animation: rise var(--d-slow) var(--ease) both;
+}
+.sheet__handle { width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); margin: 0 auto 14px; }
+.sheet__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.sheet__header h2 { font-size: 17px; font-weight: 800; }
+.sheet__close { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--player-surface-2); color: var(--player-ink-2); }
+.sheet__section-title { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+.sheet__section-title span { font-size: 11.5px; font-weight: 600; color: var(--player-ink-3); }
+
+.speed-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 4px; border-radius: var(--r-lg); background: var(--player-bg); border: 1px solid var(--player-line); direction: ltr; }
+.speed-picker__opt {
+  height: 44px; border-radius: var(--r-md); font-size: 14px; font-weight: 800; color: var(--player-ink-2); position: relative;
+  transition: background var(--d-med) var(--ease), color var(--d-med) var(--ease), transform var(--d-fast) var(--ease);
+}
+.speed-picker__opt:hover { color: #fff; background: rgba(255,255,255,.05); }
+.speed-picker__opt[aria-checked="true"] { background: var(--grad-brand); color: #fff; box-shadow: 0 6px 18px rgba(28,116,185,.45); }
+.speed-picker__opt small { position: absolute; left: 0; right: 0; bottom: 2px; font-size: 8.5px; font-weight: 600; opacity: .7; }
+
+.quality-list { display: flex; flex-direction: column; gap: 6px; margin-top: 20px; }
+.quality-opt {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-md); text-align: start; width: 100%;
+  background: var(--player-bg); border: 1px solid var(--player-line); transition: border-color var(--d-med) var(--ease), background var(--d-med) var(--ease);
+}
+.quality-opt:hover { background: var(--player-surface-2); }
+.quality-opt[aria-checked="true"] { border-color: var(--brand-400); background: rgba(28,116,185,.12); }
+.quality-opt__radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--player-ink-3); display: grid; place-items: center; flex: none; transition: border-color var(--d-med) var(--ease); }
+.quality-opt[aria-checked="true"] .quality-opt__radio { border-color: var(--brand-400); }
+.quality-opt[aria-checked="true"] .quality-opt__radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--brand-400); }
+.quality-opt__label { flex: 1; font-size: 14px; font-weight: 700; }
+.quality-opt__label small { display: block; font-size: 11.5px; font-weight: 500; color: var(--player-ink-3); }
+.quality-opt__data { font-size: 11.5px; color: var(--player-ink-3); direction: ltr; white-space: nowrap; }
+.quality-opt__tag { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: var(--accent-600); color: #fff; }
+
+/* =====================================================================
+   ZOOM MODE
+   ===================================================================== */
+.zoom-hud { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 6; display: flex; justify-content: space-between; align-items: center; direction: ltr; }
+.zoom-badge { height: 30px; padding: 0 10px; border-radius: var(--r-full); display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 800; color: #fff; }
+.zoom-badge i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-500); animation: pulse 1.6s infinite; }
+/* Picture-in-picture mini-map: whole frame + the visible viewport. Click/drag to pan. */
+.minimap {
+  position: absolute; bottom: 10px; left: 10px; width: 112px; z-index: 6; padding: 4px; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45); cursor: crosshair; touch-action: none; direction: ltr;
+}
+.minimap__frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; }
+.minimap__frame svg { width: 100%; height: 100%; opacity: .85; display: block; }
+.minimap__view {
+  position: absolute; border: 1.5px solid #fff; border-radius: 3px; box-shadow: 0 0 0 999px rgba(0,0,0,.45), 0 0 0 3px rgba(77,157,216,.45);
+  transition: all var(--d-med) var(--ease-emph);
+}
+.minimap.is-dragging .minimap__view { transition: none; }
+.minimap__caption { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px 0; font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,.8); }
+.minimap__caption b { color: var(--accent-500); }
+
+/* Vertical zoom rail on the video edge (1× bottom → 4× top) */
+.zoom-rail {
+  position: absolute; right: 10px; top: 50px; bottom: 10px; width: 40px; z-index: 6; border-radius: var(--r-full);
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 8px 0; direction: ltr; touch-action: none;
+}
+.zoom-rail__btn { width: 28px; height: 22px; display: grid; place-items: center; color: #fff; font-size: 16px; font-weight: 700; line-height: 1; }
+.zoom-rail__track { position: relative; flex: 1; width: 4px; margin: 6px 0; border-radius: 2px; background: rgba(255,255,255,.2); cursor: pointer; }
+.zoom-rail__track::before { content: ''; position: absolute; inset: 0 -14px; }  /* wider hit area */
+.zoom-rail__fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 2px; background: linear-gradient(0deg, var(--brand-600), var(--brand-400)); transition: height var(--d-med) var(--ease-emph); }
+.zoom-rail__knob { position: absolute; left: 50%; width: 16px; height: 16px; border-radius: 50%; background: #fff; transform: translate(-50%, 50%); box-shadow: 0 0 0 4px rgba(28,116,185,.4); transition: bottom var(--d-med) var(--ease-emph); }
+.zoom-rail.is-dragging .zoom-rail__fill, .zoom-rail.is-dragging .zoom-rail__knob { transition: none; }
+.zoom-panel { margin: 16px; padding: 16px; border-radius: var(--r-xl); background: var(--player-surface); border: 1px solid var(--player-line); display: flex; flex-direction: column; gap: 14px; }
+.zoom-panel__head { display: flex; justify-content: space-between; align-items: center; }
+.zoom-panel__head h3 { font-size: 15px; font-weight: 800; }
+.zoom-slider { display: flex; align-items: center; gap: 10px; direction: ltr; }
+.zoom-slider__btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--player-surface-2); color: #fff; font-size: 20px; font-weight: 700; transition: transform var(--d-fast) var(--ease); }
+.zoom-slider__btn:active { transform: scale(.9); }
+.zoom-slider__control { flex: 1; padding: 10px 0 18px; position: relative; touch-action: none; cursor: pointer; }
+.zoom-slider__track { height: 6px; border-radius: 3px; background: var(--player-surface-2); position: relative; }
+.zoom-slider__fill { position: absolute; inset-block: 0; left: 0; border-radius: 3px; background: var(--grad-brand); transition: width var(--d-med) var(--ease-emph); }
+.zoom-slider__knob { position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); box-shadow: 0 0 0 5px rgba(28,116,185,.3), 0 2px 8px rgba(0,0,0,.4); transition: left var(--d-med) var(--ease-emph); }
+.zoom-slider__control.is-dragging .zoom-slider__fill, .zoom-slider__control.is-dragging .zoom-slider__knob { transition: none; }
+.zoom-slider__ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 14px; }
+.zoom-slider__tick { position: absolute; transform: translateX(-50%); font-size: 10px; font-weight: 700; color: var(--player-ink-3); }
+.zoom-slider__tick::before { content: ''; position: absolute; left: 50%; top: -9px; width: 1px; height: 5px; background: var(--player-ink-3); }
+.zoom-slider__value { min-width: 44px; text-align: center; font-weight: 800; font-size: 15px; }
+.zoom-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; direction: ltr; }
+.zoom-presets__opt {
+  height: 34px; border-radius: var(--r-sm); font-size: 12.5px; font-weight: 800; color: var(--player-ink-2);
+  background: var(--player-bg); border: 1px solid var(--player-line);
+  transition: background var(--d-med) var(--ease), color var(--d-med) var(--ease), border-color var(--d-med) var(--ease);
+}
+.zoom-presets__opt:hover { color: #fff; }
+.zoom-presets__opt[aria-pressed="true"] { background: rgba(28,116,185,.18); border-color: var(--brand-400); color: #fff; }
+.zoom-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.zoom-stats__item { padding: 10px 12px; border-radius: var(--r-md); background: var(--player-bg); border: 1px solid var(--player-line); font-size: 11px; color: var(--player-ink-3); }
+.zoom-stats__item strong { display: block; font-size: 15px; color: var(--player-ink-1); font-variant-numeric: tabular-nums; }
+.gesture-tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.gesture-tip { padding: 10px 6px; border-radius: var(--r-md); background: var(--player-bg); border: 1px solid var(--player-line); text-align: center; font-size: 11px; color: var(--player-ink-2); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.gesture-tip .icon { color: var(--brand-400); }
+.security-note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); background: rgba(230,90,31,.08); border: 1px solid rgba(230,90,31,.2); font-size: 12px; color: var(--player-ink-2); }
+.security-note .icon { color: var(--accent-500); }
+
+/* =====================================================================
+   STATES — retry overlay, error overlay, toasts, skeleton
+   ===================================================================== */
+.state-block { padding: 0 16px; }
+.state-block__label { font-size: 12px; font-weight: 700; color: var(--player-ink-3); padding: 16px 16px 8px; display: flex; gap: 8px; align-items: center; }
+.state-block__label::after { content: ''; flex: 1; height: 1px; background: var(--player-line); }
+.player--frozen .player__zoom-layer { filter: blur(3px) saturate(.6) brightness(.55); transform: scale(1.04); }
+.overlay { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 16px; }
+.retry-ring { width: 52px; height: 52px; position: relative; }
+.retry-ring svg { width: 100%; height: 100%; animation: spin 1.1s linear infinite; }
+.retry-ring__icon { position: absolute; inset: 0; display: grid; place-items: center; color: var(--warning); }
+.overlay__title { font-size: 14px; font-weight: 800; color: #fff; }
+.overlay__sub { font-size: 11.5px; color: rgba(255,255,255,.7); }
+.retry-steps { display: flex; gap: 4px; direction: ltr; }
+.retry-steps i { width: 18px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); }
+.retry-steps i.is-done { background: var(--warning); }
+.retry-steps i.is-now { background: var(--warning); animation: pulse 1s infinite; }
+.error-overlay { background: radial-gradient(circle at 50% 40%, rgba(220,38,38,.16), rgba(5,8,15,.92) 70%); }
+.error-overlay__icon { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(220,38,38,.18); color: #F87171; box-shadow: 0 0 0 6px rgba(220,38,38,.08); }
+.error-overlay__actions { display: flex; gap: 8px; margin-top: 4px; }
+.error-overlay__actions .btn { height: 36px; padding: 0 14px; font-size: 12.5px; border-radius: var(--r-sm); }
+
+.toast-stack { display: flex; flex-direction: column; gap: 10px; }
+.toast {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-lg); position: relative; overflow: hidden;
+  background: rgba(20,32,51,.82); border: 1px solid var(--player-line); box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  animation: rise var(--d-slow) var(--ease) both;
+}
+.toast__icon { width: 34px; height: 34px; border-radius: var(--r-sm); display: grid; place-items: center; flex: none; }
+.toast--warning .toast__icon { background: rgba(245,158,11,.16); color: #FBBF24; }
+.toast--success .toast__icon { background: rgba(34,197,94,.16); color: #4ADE80; }
+.toast--error   .toast__icon { background: rgba(239,68,68,.16); color: #F87171; }
+.toast--info    .toast__icon { background: rgba(77,157,216,.16); color: var(--brand-400); }
+.toast__body { flex: 1; min-width: 0; }
+.toast__title { font-size: 13px; font-weight: 800; }
+.toast__text { font-size: 12px; color: var(--player-ink-2); line-height: 1.55; }
+.toast__action { font-size: 12px; font-weight: 800; color: var(--brand-400); white-space: nowrap; align-self: center; }
+.toast__timer { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: currentColor; opacity: .5; transform-origin: right; animation: drain 5s linear infinite; }
+.toast--success .toast__timer { color: #4ADE80; }
+.toast--warning .toast__timer { color: #FBBF24; }
+
+.offline-banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--r-md); background: #F3F4F6; color: #111827; font-size: 12.5px; font-weight: 700; }
+.offline-banner__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 0 4px rgba(217,119,6,.2); animation: pulse 1.6s infinite; }
+.offline-banner span { font-weight: 500; color: #6B7280; margin-inline-start: auto; }
+
+.skeleton-card { display: flex; gap: 12px; padding: 10px; border-radius: var(--r-lg); background: var(--player-surface); border: 1px solid var(--player-line); }
+.sk { border-radius: 8px; background: linear-gradient(90deg, #142033 0%, #1F2E46 50%, #142033 100%); background-size: 200% 100%; animation: shimmer 1.6s linear infinite; }
+
+/* =====================================================================
+   TOKENS FRAME
+   ===================================================================== */
+.tokens { width: 100%; max-width: 1240px; padding: 24px; border-radius: 28px; background: var(--surface); color: var(--ink-1); border: 1px solid var(--line); box-shadow: var(--shadow-md); display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.tokens h3 { font-size: 13px; font-weight: 800; margin-bottom: 12px; color: var(--ink-2); }
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.swatch { display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; color: var(--ink-2); }
+.swatch i { display: block; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); }
+.swatch b { color: var(--ink-1); font-size: 11px; }
+.type-scale div { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.type-scale small { color: var(--ink-3); font-size: 11px; direction: ltr; }
+.radii { display: flex; gap: 10px; flex-wrap: wrap; }
+.radii div { width: 52px; height: 52px; background: var(--brand-soft); border: 1.5px solid var(--brand-ink); display: grid; place-items: end center; font-size: 10px; padding-bottom: 4px; color: var(--brand-ink); font-weight: 700; }
+.spacing-row { display: flex; align-items: flex-end; gap: 10px; }
+.spacing-row div { background: var(--accent-soft); border-inline-start: 2px solid var(--accent-600); font-size: 10px; color: var(--ink-2); writing-mode: horizontal-tb; display: flex; align-items: flex-end; padding: 2px; }
+
+@media (max-width: 440px) {
+  .device { border-radius: 36px; box-shadow: 0 0 0 6px #0B0F17, 0 20px 50px rgba(15,23,42,.25); }
+  .canvas { gap: 40px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ CANVAS HEADER ============================ -->
+<header class="canvas-header" id="canvas-header">
+  <div class="canvas-header__brand">
+    <div class="brand-mark">ثقة</div>
+    <div>
+      <h1>إعادة تصميم تطبيق الطالب</h1>
+      <p>الدروس · مشغّل الفيديو · التكبير والسرعة والجودة · حالات الاتصال والأخطاء</p>
+    </div>
+  </div>
+  <div class="theme-toggle" role="group" aria-label="المظهر" id="theme-toggle">
+    <button type="button" data-theme-set="light">فاتح</button>
+    <button type="button" data-theme-set="auto">تلقائي</button>
+    <button type="button" data-theme-set="dark">داكن</button>
+  </div>
+</header>
+
+<main class="canvas" id="canvas">
+
+  <!-- ===================================================================
+       FRAME 1 — Lessons list
+       =================================================================== -->
+  <section class="frame" id="frame-lessons-list" aria-label="Lessons list">
+    <div class="frame__label">01 · قائمة الدروس <span>Lessons List</span></div>
+    <div class="device" id="device-lessons">
+      <div class="status-bar"><span>9:41</span><span class="status-bar__icons"><span class="icon icon--sm" data-icon="wifi"></span><span class="status-bar__battery"></span></span></div>
+      <div class="device-body">
+
+        <div class="app-bar" id="lessons-app-bar">
+          <button class="icon-btn" aria-label="رجوع"><span class="icon flip-rtl" data-icon="back"></span></button>
+          <div class="app-bar__titles">
+            <div class="app-bar__eyebrow">الرياضيات · الصف الثالث الثانوي</div>
+            <div class="app-bar__title">التكامل</div>
+          </div>
+          <button class="icon-btn" aria-label="بحث"><span class="icon" data-icon="search"></span></button>
+        </div>
+
+        <div class="chapter-hero" id="chapter-hero">
+          <div class="chapter-hero__top">
+            <div class="chapter-hero__text">
+              <span class="chapter-hero__chip">الفصل الثالث</span>
+              <div class="chapter-hero__title">التكامل وتطبيقاته</div>
+              <div class="chapter-hero__stats"><span>6 دروس</span><span>·</span><span class="num">2 س 14 د</span><span>·</span><span>2 مكتمل</span></div>
+            </div>
+            <div class="progress-ring" aria-label="نسبة الإنجاز 38٪">
+              <svg viewBox="0 0 68 68"><circle cx="34" cy="34" r="29" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="6"/><circle cx="34" cy="34" r="29" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-dasharray="182.2" stroke-dashoffset="113"/></svg>
+              <div class="progress-ring__value"><div>38%<small>منجز</small></div></div>
+            </div>
+          </div>
+          <button class="chapter-hero__resume" id="hero-resume">
+            <span class="chapter-hero__resume-play"><span class="icon" data-icon="play"></span></span>
+            <span class="chapter-hero__resume-text">تابِع من حيث توقفت · <span class="num">14:58</span><strong>قواعد التكامل الأساسية</strong></span>
+            <span class="icon flip-rtl" data-icon="chevron"></span>
+          </button>
+        </div>
+
+        <div class="filter-row" role="group" aria-label="تصفية الدروس" id="lesson-filters">
+          <button class="filter-chip" aria-pressed="true">الكل <span class="filter-chip__count">6</span></button>
+          <button class="filter-chip" aria-pressed="false">قيد المشاهدة <span class="filter-chip__count">1</span></button>
+          <button class="filter-chip" aria-pressed="false">مكتملة <span class="filter-chip__count">2</span></button>
+          <button class="filter-chip" aria-pressed="false"><span class="icon icon--sm" data-icon="offline"></span> المحفوظة <span class="filter-chip__count">2</span></button>
+        </div>
+
+        <div class="offline-summary" id="offline-summary">
+          <span class="icon icon--md" data-icon="shield"></span>
+          <div>درسان متاحان دون اتصال · <span class="num">412 MB</span><br><span>مشفّرة على هذا الجهاز · تحقّق تلقائي كل 7 أيام</span></div>
+        </div>
+
+        <div class="section-title"><h2>الدروس</h2><span>عرض 6 من 6</span></div>
+
+        <div class="lesson-list" id="lesson-list">
+
+          <!-- Lesson 1: completed + downloaded -->
+          <article class="lesson-card" id="lesson-card-1" style="animation-delay:.02s">
+            <div class="lesson-card__thumb lesson-card__thumb--alt1">
+              <span class="lesson-card__thumb-num">01</span>
+              <span class="lesson-card__thumb-play"><span class="icon icon--md" data-icon="replay"></span></span>
+              <span class="lesson-card__thumb-duration">18:42</span>
+            </div>
+            <div class="lesson-card__body">
+              <h3 class="lesson-card__title">مقدمة في التكامل غير المحدد</h3>
+              <p class="lesson-card__desc">ما هو التكامل؟ العلاقة العكسية بين الاشتقاق والتكامل، وثابت التكامل C.</p>
+              <div class="lesson-card__meta">
+                <span class="badge badge--success"><span class="icon icon--sm" data-icon="check"></span>مكتمل</span>
+                <span class="badge badge--neutral"><span class="icon icon--sm" data-icon="offline"></span>محفوظ</span>
+              </div>
+            </div>
+            <div class="lesson-card__action"><button class="dl dl--done" aria-label="محفوظ — حذف التنزيل"><span class="icon icon--md" data-icon="done"></span></button></div>
+          </article>
+
+          <!-- Lesson 2: in progress (active) + downloaded -->
+          <article class="lesson-card lesson-card--active" id="lesson-card-2" style="animation-delay:.06s">
+            <div class="lesson-card__thumb">
+              <span class="lesson-card__thumb-num">02</span>
+              <span class="lesson-card__thumb-play"><span class="icon icon--md" data-icon="play"></span></span>
+              <span class="lesson-card__thumb-duration">24:10</span>
+              <span class="lesson-card__thumb-progress"><i style="width:62%"></i></span>
+            </div>
+            <div class="lesson-card__body">
+              <h3 class="lesson-card__title">قواعد التكامل الأساسية</h3>
+              <p class="lesson-card__desc">قاعدة القوة، تكامل الثابت، وتكامل المجموع — مع أمثلة محلولة خطوة بخطوة.</p>
+              <div class="lesson-card__meta">
+                <span class="badge badge--brand"><span class="icon icon--sm" data-icon="schedule"></span>متبقٍ 9 د</span>
+                <span class="num">62%</span>
+              </div>
+            </div>
+            <div class="lesson-card__action"><button class="dl dl--done" aria-label="محفوظ — حذف التنزيل"><span class="icon icon--md" data-icon="done"></span></button></div>
+          </article>
+
+          <!-- Lesson 3: downloading -->
+          <article class="lesson-card" id="lesson-card-3" style="animation-delay:.10s">
+            <div class="lesson-card__thumb lesson-card__thumb--alt2">
+              <span class="lesson-card__thumb-num">03</span>
+              <span class="lesson-card__thumb-play"><span class="icon icon--md" data-icon="play"></span></span>
+              <span class="lesson-card__thumb-duration">21:05</span>
+            </div>
+            <div class="lesson-card__body">
+              <h3 class="lesson-card__title">التكامل بالتعويض</h3>
+              <p class="lesson-card__desc">اختيار المتغير المناسب وتحويل التكامل إلى صيغة مألوفة.</p>
+              <div class="lesson-card__meta" style="display:block">
+                <div class="lesson-card__dl-status">جارٍ التنزيل · <span class="num ltr" style="display:inline-block">86 / 184 MB</span></div>
+                <div class="lesson-card__dl-bar"><i style="width:47%"></i></div>
+              </div>
+            </div>
+            <div class="lesson-card__action">
+              <button class="dl dl--progress" aria-label="إيقاف التنزيل مؤقتًا — 47٪">
+                <svg class="dl__ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="none" stroke="var(--surface-3)" stroke-width="3"/><circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="106.8" stroke-dashoffset="56.6"/></svg>
+                <span class="icon icon--sm" data-icon="pause"></span>
+              </button>
+            </div>
+          </article>
+
+          <!-- Lesson 4: waiting for network -->
+          <article class="lesson-card" id="lesson-card-4" style="animation-delay:.14s">
+            <div class="lesson-card__thumb lesson-card__thumb--alt3">
+              <span class="lesson-card__thumb-num">04</span>
+              <span class="lesson-card__thumb-play"><span class="icon icon--md" data-icon="play"></span></span>
+              <span class="lesson-card__thumb-duration">26:30</span>
+            </div>
+            <div class="lesson-card__body">
+              <h3 class="lesson-card__title">التكامل بالتجزئة</h3>
+              <p class="lesson-card__desc">قاعدة LIATE لاختيار u و dv، وحالات التكرار.</p>
+              <div class="lesson-card__meta">
+                <span class="badge badge--warning"><span class="icon icon--sm" data-icon="cloud"></span>بانتظار الاتصال</span>
+                <span>سيبدأ تلقائيًا</span>
+              </div>
+            </div>
+            <div class="lesson-card__action"><button class="dl dl--waiting" aria-label="في قائمة الانتظار — إلغاء"><span class="icon icon--sm" data-icon="close"></span></button></div>
+          </article>
+
+          <!-- Lesson 5: new / not started -->
+          <article class="lesson-card" id="lesson-card-5" style="animation-delay:.18s">
+            <div class="lesson-card__thumb lesson-card__thumb--alt4">
+              <span class="lesson-card__thumb-num">05</span>
+              <span class="lesson-card__thumb-play"><span class="icon icon--md" data-icon="play"></span></span>
+              <span class="lesson-card__thumb-duration">32:18</span>
+            </div>
+            <div class="lesson-card__body">
+              <h3 class="lesson-card__title">التكامل المحدد ومساحة المنطقة</h3>
+              <p class="lesson-card__desc">النظرية الأساسية للتفاضل والتكامل وحساب المساحة تحت المنحنى.</p>
+              <div class="lesson-card__meta">
+                <span class="badge badge--accent">جديد</span>
+                <span class="num">32 دقيقة</span>
+              </div>
+            </div>
+            <div class="lesson-card__action"><button class="dl dl--idle" aria-label="تنزيل للمشاهدة دون اتصال"><span class="icon icon--md" data-icon="download"></span></button></div>
+          </article>
+
+          <!-- Lesson 6: download failed -->
+          <article class="lesson-card" id="lesson-card-6" style="animation-delay:.22s">
+            <div class="lesson-card__thumb lesson-card__thumb--alt5">
+              <span class="lesson-card__thumb-num">06</span>
+              <span class="lesson-card__thumb-play"><span class="icon icon--md" data-icon="play"></span></span>
+              <span class="lesson-card__thumb-duration">19:47</span>
+            </div>
+            <div class="lesson-card__body">
+              <h3 class="lesson-card__title">تطبيقات فيزيائية على التكامل</h3>
+              <p class="lesson-card__desc">الإزاحة والسرعة والشغل المبذول باستخدام التكامل المحدد.</p>
+              <div class="lesson-card__meta">
+                <span class="badge badge--error"><span class="icon icon--sm" data-icon="alert"></span>تعذّر التنزيل</span>
+                <span>المساحة غير كافية</span>
+              </div>
+            </div>
+            <div class="lesson-card__action"><button class="dl dl--failed" aria-label="إعادة محاولة التنزيل"><span class="icon icon--md" data-icon="refresh"></span></button></div>
+          </article>
+
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FRAME 2 — Video player (portrait)
+       =================================================================== -->
+  <section class="frame" id="frame-video-player" aria-label="Video player">
+    <div class="frame__label">02 · مشغّل الفيديو <span>Video Player</span></div>
+    <div class="device device--player" id="device-player">
+      <div class="status-bar"><span>9:41</span><span class="status-bar__icons"><span class="icon icon--sm" data-icon="wifi"></span><span class="status-bar__battery"></span></span></div>
+      <div class="device-body">
+
+        <div class="player" id="player-main" data-duration="1450" data-position="898">
+          <div class="player__viewport"><div class="player__zoom-layer" data-scene></div></div>
+          <div class="player__scrim"></div>
+          <div class="player__watermark" style="top:30%;left:8%">أحمد محمود · 0791 234 567</div>
+          <div class="player__watermark" style="top:66%;left:48%">أحمد محمود · 0791 234 567</div>
+
+          <div class="player__topbar">
+            <div class="player__tools">
+              <button class="p-btn glass" aria-label="ملء الشاشة"><span class="icon icon--md" data-icon="fullscreen"></span></button>
+              <button class="p-chip glass" data-speed-label data-open-sheet aria-label="سرعة التشغيل">1.25×</button>
+              <button class="p-chip p-chip--hd glass" data-quality-label data-open-sheet aria-label="جودة الفيديو">720p<sup>HD</sup></button>
+            </div>
+            <button class="p-btn glass" aria-label="المزيد"><span class="icon icon--md" data-icon="more"></span></button>
+          </div>
+
+          <div class="skip-ripple skip-ripple--back" data-skip-ripple="back"><span class="icon icon--md" data-icon="replay"></span>10 ث</div>
+          <div class="skip-ripple skip-ripple--fwd" data-skip-ripple="fwd">10 ث<span class="icon icon--md flip-rtl" data-icon="replay"></span></div>
+
+          <div class="player__center">
+            <button class="p-play glass" id="play-toggle" aria-label="إيقاف مؤقت"><span class="icon icon--xl" data-icon="pause"></span></button>
+          </div>
+
+          <div class="player__hint glass"><span class="icon icon--sm" data-icon="pinch"></span>قرِّب بإصبعين للتكبير</div>
+
+          <div class="player__bottom">
+            <div class="timeline" role="slider" aria-label="موضع التشغيل" aria-valuemin="0" aria-valuemax="100">
+              <div class="timeline__track">
+                <div class="timeline__buffered" style="width:70%"></div>
+                <div class="timeline__played"></div>
+                <div class="timeline__tick" style="left:22%"></div>
+                <div class="timeline__tick" style="left:48%"></div>
+                <div class="timeline__tick" style="left:81%"></div>
+              </div>
+              <div class="timeline__thumb"></div>
+            </div>
+            <div class="player__controls">
+              <div class="player__controls-group">
+                <button class="skip-btn glass" data-skip="-10" aria-label="رجوع 10 ثوانٍ"><span class="icon icon--md" data-icon="replay"></span><span class="skip-btn__label">−10</span></button>
+                <button class="skip-btn glass" data-skip="10" aria-label="تقديم 10 ثوانٍ"><span class="skip-btn__label">+10</span><span class="icon icon--md flip-rtl" data-icon="replay"></span></button>
+                <span class="player__time num"><b data-time-current>14:58</b> <span>/ 24:10</span></span>
+              </div>
+              <span class="player__remaining glass" data-remaining></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lesson-info" id="lesson-info">
+          <div>
+            <div class="lesson-info__eyebrow">الدرس 2 من 6 · التكامل وتطبيقاته</div>
+            <h1 class="lesson-info__title">قواعد التكامل الأساسية</h1>
+          </div>
+          <div class="lesson-info__chips">
+            <span class="info-chip"><span class="icon icon--sm" data-icon="schedule"></span><span class="num">24:10</span></span>
+            <span class="info-chip info-chip--success"><span class="icon icon--sm" data-icon="offline"></span>متاح دون اتصال</span>
+            <span class="info-chip"><span class="icon icon--sm" data-icon="doc"></span>ورقة عمل</span>
+          </div>
+          <div class="watch-progress"><span>شاهدت</span><div class="watch-progress__bar"><i style="width:62%"></i></div><span class="num">62%</span></div>
+
+          <button class="time-saved-pill" data-time-saved="compact" data-open-sheet aria-live="polite">
+            <span class="time-saved__icon"><span class="icon icon--md" data-icon="bolt"></span></span>
+            <span class="time-saved-pill__text" data-time-saved-text></span>
+            <span class="time-saved-pill__cta">تغيير</span>
+          </button>
+
+          <div class="desc-card" id="desc-card">
+            <h3><span class="icon icon--sm" data-icon="info"></span>عن هذا الدرس</h3>
+            <p>نتعرّف في هذا الدرس على القواعد الأساسية لإيجاد التكامل غير المحدد: قاعدة القوة، وتكامل الثابت، وتكامل مجموع دالتين وفرقهما، مع أمثلة محلولة خطوة بخطوة وتمارين متدرجة في نهاية الدرس. يُنصح بمراجعة درس المشتقات قبل البدء.</p>
+            <div class="desc-card__points">
+              <div class="desc-card__point">قاعدة القوة ∫xⁿdx وحالة n = −1</div>
+              <div class="desc-card__point">خاصية الخطية: إخراج الثابت وتوزيع التكامل</div>
+              <div class="desc-card__point">8 تمارين محلولة + ورقة عمل للتدريب</div>
+            </div>
+            <button class="desc-card__toggle" id="desc-toggle" aria-expanded="false">عرض المزيد</button>
+          </div>
+
+          <div class="quick-settings">
+            <button class="quick-setting" data-open-sheet>
+              <span class="quick-setting__icon"><span class="icon icon--md" data-icon="speed"></span></span>
+              <span class="quick-setting__text">السرعة<strong class="ltr" data-speed-label>1.25×</strong></span>
+            </button>
+            <button class="quick-setting" data-open-sheet>
+              <span class="quick-setting__icon"><span class="icon icon--md" data-icon="hd"></span></span>
+              <span class="quick-setting__text">الجودة<strong class="ltr" data-quality-label>720p</strong></span>
+            </button>
+          </div>
+
+          <div class="up-next">
+            <h3>التالي</h3>
+            <div class="up-next__item">
+              <div class="up-next__thumb"><span>21:05</span></div>
+              <div class="up-next__text"><strong>التكامل بالتعويض</strong>الدرس 3 · جارٍ التنزيل 47%</div>
+              <span class="icon icon--md flip-rtl" data-icon="chevron"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FRAME 3 — Playback settings sheet (speed + quality)
+       =================================================================== -->
+  <section class="frame" id="frame-playback-sheet" aria-label="Playback settings sheet">
+    <div class="frame__label">03 · السرعة والجودة <span>Speed &amp; Quality Sheet</span></div>
+    <div class="device device--player" id="device-sheet">
+      <div class="status-bar"><span>9:41</span><span class="status-bar__icons"><span class="icon icon--sm" data-icon="wifi"></span><span class="status-bar__battery"></span></span></div>
+      <div class="device-body">
+        <div class="player">
+          <div class="player__viewport"><div class="player__zoom-layer" data-scene></div></div>
+          <div class="player__scrim"></div>
+        </div>
+        <div class="lesson-info" style="opacity:.5">
+          <h1 class="lesson-info__title">قواعد التكامل الأساسية</h1>
+        </div>
+
+        <div class="sheet-scrim"></div>
+        <div class="sheet" id="playback-sheet" role="dialog" aria-label="إعدادات التشغيل">
+          <div class="sheet__handle"></div>
+          <div class="sheet__header">
+            <h2>إعدادات التشغيل</h2>
+            <button class="sheet__close" aria-label="إغلاق"><span class="icon icon--md" data-icon="close"></span></button>
+          </div>
+
+          <div class="sheet__section-title">سرعة التشغيل <span>تُحفظ لكل الدروس</span></div>
+          <div class="speed-picker" role="radiogroup" aria-label="سرعة التشغيل" id="speed-picker">
+            <button class="speed-picker__opt" role="radio" aria-checked="false" data-speed="0.75">0.75×</button>
+            <button class="speed-picker__opt" role="radio" aria-checked="false" data-speed="1">1×<small>عادية</small></button>
+            <button class="speed-picker__opt" role="radio" aria-checked="true"  data-speed="1.25">1.25×</button>
+            <button class="speed-picker__opt" role="radio" aria-checked="false" data-speed="1.5">1.5×</button>
+            <button class="speed-picker__opt" role="radio" aria-checked="false" data-speed="2">2×</button>
+          </div>
+          <div class="time-saved" data-time-saved="full" aria-live="polite">
+            <div class="time-saved__head">
+              <span class="time-saved__icon"><span class="icon icon--md" data-icon="bolt"></span></span>
+              <div>
+                <div class="time-saved__title" data-time-saved-text></div>
+                <div class="time-saved__sub" data-time-saved-sub></div>
+              </div>
+            </div>
+            <div class="time-saved__meter" aria-hidden="true">
+              <div class="time-saved__row"><span>1×</span><div class="time-saved__bar"><i style="width:100%"></i></div><span>24:10</span></div>
+              <div class="time-saved__row"><span data-meter-speed>1.25×</span><div class="time-saved__bar time-saved__bar--speed"><i data-meter-bar></i></div><span data-meter-time></span></div>
+            </div>
+          </div>
+
+          <div class="quality-list" role="radiogroup" aria-label="جودة الفيديو" id="quality-list">
+            <div class="sheet__section-title" style="margin:0 0 4px">جودة الفيديو <span>استهلاك تقريبي للبيانات</span></div>
+            <button class="quality-opt" role="radio" aria-checked="false" data-quality="480p">
+              <span class="quality-opt__radio"></span>
+              <span class="quality-opt__label">480p <small>موفّر للبيانات · الافتراضي</small></span>
+              <span class="quality-opt__data">≈ 4 MB/min</span>
+            </button>
+            <button class="quality-opt" role="radio" aria-checked="true" data-quality="720p">
+              <span class="quality-opt__radio"></span>
+              <span class="quality-opt__label">720p <small>وضوح عالٍ للسبّورة</small></span>
+              <span class="quality-opt__tag">HD</span>
+              <span class="quality-opt__data">≈ 9 MB/min</span>
+            </button>
+            <button class="quality-opt" role="radio" aria-checked="false" data-quality="1080p">
+              <span class="quality-opt__radio"></span>
+              <span class="quality-opt__label">1080p <small>يُنصح به على Wi-Fi</small></span>
+              <span class="quality-opt__tag">FHD</span>
+              <span class="quality-opt__data">≈ 18 MB/min</span>
+            </button>
+            <button class="quality-opt" role="radio" aria-checked="false" data-quality="360p">
+              <span class="quality-opt__radio"></span>
+              <span class="quality-opt__label">360p <small>للاتصال الضعيف جدًا</small></span>
+              <span class="quality-opt__data">≈ 2 MB/min</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FRAME 4 — Zoom mode
+       =================================================================== -->
+  <section class="frame" id="frame-zoom-mode" aria-label="Zoom mode">
+    <div class="frame__label">04 · وضع التكبير <span>Zoom Mode</span></div>
+    <div class="device device--player" id="device-zoom">
+      <div class="status-bar"><span>9:41</span><span class="status-bar__icons"><span class="icon icon--sm" data-icon="wifi"></span><span class="status-bar__battery"></span></span></div>
+      <div class="device-body">
+        <div class="player" id="player-zoom">
+          <div class="player__viewport"><div class="player__zoom-layer" data-scene id="zoom-layer"></div></div>
+          <!-- watermark sits OUTSIDE the zoom layer: always visible -->
+          <div class="player__watermark" style="top:24%;left:10%">أحمد محمود · 0791 234 567</div>
+          <div class="player__watermark" style="top:64%;left:46%">أحمد محمود · 0791 234 567</div>
+          <div class="zoom-hud">
+            <div class="player__tools">
+              <button class="p-btn glass" aria-label="إيقاف مؤقت" id="zoom-play"><span class="icon icon--md" data-icon="pause"></span></button>
+              <button class="p-btn glass" aria-label="إلغاء التكبير" id="zoom-reset"><span class="icon icon--md" data-icon="zoomreset"></span></button>
+              <button class="p-chip glass" data-speed-label data-open-sheet>1.25×</button>
+            </div>
+            <span class="zoom-badge glass"><i></i><span id="zoom-badge-value">2.4×</span></span>
+          </div>
+          <!-- Vertical zoom rail: drag the knob, or tap − / + -->
+          <div class="zoom-rail glass" id="zoom-rail" role="slider" aria-label="مستوى التكبير" aria-orientation="vertical" aria-valuemin="1" aria-valuemax="4">
+            <button class="zoom-rail__btn" data-zoom-step="0.5" aria-label="تكبير">+</button>
+            <div class="zoom-rail__track" id="zoom-rail-track"><div class="zoom-rail__fill" id="zoom-rail-fill"></div><div class="zoom-rail__knob" id="zoom-rail-knob"></div></div>
+            <button class="zoom-rail__btn" data-zoom-step="-0.5" aria-label="تصغير">−</button>
+          </div>
+
+          <!-- PiP mini-map: whole frame with the visible viewport; click or drag to pan -->
+          <div class="minimap glass" id="minimap" role="group" aria-label="خريطة موضع التكبير">
+            <div class="minimap__frame">
+              <div data-scene-mini style="width:100%;height:100%"></div>
+              <div class="minimap__view" id="minimap-view"></div>
+            </div>
+            <div class="minimap__caption"><span>موضعك</span><b id="minimap-zoom">2.4×</b></div>
+          </div>
+        </div>
+
+        <div class="zoom-panel" id="zoom-panel">
+          <div class="zoom-panel__head">
+            <h3>التكبير</h3>
+            <span class="badge badge--brand" style="background:rgba(77,157,216,.14);color:#4D9DD8">أدوات التحكم مخفية أثناء التكبير</span>
+          </div>
+          <div class="zoom-slider" role="group" aria-label="مستوى التكبير">
+            <button class="zoom-slider__btn" data-zoom-step="-0.5" aria-label="تصغير">−</button>
+            <div class="zoom-slider__control" id="zoom-control" role="slider" aria-label="مستوى التكبير" aria-valuemin="1" aria-valuemax="4" tabindex="0">
+              <div class="zoom-slider__track"><div class="zoom-slider__fill" id="zoom-fill"></div><div class="zoom-slider__knob" id="zoom-knob"></div></div>
+              <div class="zoom-slider__ticks">
+                <span class="zoom-slider__tick" style="left:0%">1×</span>
+                <span class="zoom-slider__tick" style="left:33.333%">2×</span>
+                <span class="zoom-slider__tick" style="left:66.667%">3×</span>
+                <span class="zoom-slider__tick" style="left:100%">4×</span>
+              </div>
+            </div>
+            <button class="zoom-slider__btn" data-zoom-step="0.5" aria-label="تكبير">+</button>
+            <span class="zoom-slider__value num" id="zoom-value">2.4×</span>
+          </div>
+          <div class="zoom-presets" role="group" aria-label="مستويات جاهزة" id="zoom-presets">
+            <button class="zoom-presets__opt" data-zoom="1">1×</button>
+            <button class="zoom-presets__opt" data-zoom="1.5">1.5×</button>
+            <button class="zoom-presets__opt" data-zoom="2">2×</button>
+            <button class="zoom-presets__opt" data-zoom="3">3×</button>
+            <button class="zoom-presets__opt" data-zoom="4">4×</button>
+          </div>
+          <div class="zoom-stats">
+            <div class="zoom-stats__item">المساحة الظاهرة<strong id="zoom-area">17%</strong></div>
+            <div class="zoom-stats__item">موضع العرض<strong id="zoom-pos">يمين · أسفل</strong></div>
+          </div>
+          <div class="gesture-tips">
+            <div class="gesture-tip"><span class="icon" data-icon="pinch"></span>إصبعان للتكبير حتى 4×</div>
+            <div class="gesture-tip"><span class="icon" data-icon="pan"></span>اسحب لتحريك الصورة</div>
+            <div class="gesture-tip"><span class="icon" data-icon="zoomreset"></span>زر الإعادة لإظهار التحكم</div>
+          </div>
+          <div class="security-note"><span class="icon icon--md" data-icon="shield"></span><div>العلامة المائية ثابتة فوق الصورة المكبّرة، فلا يمكن إخفاؤها بالتكبير.</div></div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FRAME 5 — Connection & error states
+       =================================================================== -->
+  <section class="frame" id="frame-states" aria-label="Connection and error states">
+    <div class="frame__label">05 · الاتصال والأخطاء <span>Retry · Error · Toasts</span></div>
+    <div class="device device--player" id="device-states">
+      <div class="status-bar"><span>9:41</span><span class="status-bar__icons"><span class="icon icon--sm" data-icon="wifi" style="opacity:.4"></span><span class="status-bar__battery"></span></span></div>
+      <div class="device-body">
+
+        <div class="state-block__label">اتصال ضعيف — إعادة محاولة تلقائية</div>
+        <div class="state-block">
+          <div class="player player--frozen" id="player-retrying" style="border-radius:18px">
+            <div class="player__viewport"><div class="player__zoom-layer" data-scene></div></div>
+            <div class="overlay" role="status" aria-live="polite">
+              <div class="retry-ring">
+                <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="4"/><circle cx="26" cy="26" r="22" fill="none" stroke="#FBBF24" stroke-width="4" stroke-linecap="round" stroke-dasharray="40 98"/></svg>
+                <span class="retry-ring__icon"><span class="icon icon--md" data-icon="wifi"></span></span>
+              </div>
+              <div class="overlay__title">الاتصال ضعيف، جارٍ إعادة المحاولة…</div>
+              <div class="overlay__sub">المحاولة <span class="num" id="retry-attempt">2</span> من 4 · خلال <span class="num" id="retry-count">2</span> ث · سيُستأنف من <span class="num">14:58</span></div>
+              <div class="retry-steps" id="retry-steps"><i class="is-done"></i><i class="is-now"></i><i></i><i></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-block__label">تعذّر التشغيل بعد 4 محاولات</div>
+        <div class="state-block">
+          <div class="player player--frozen" id="player-error" style="border-radius:18px">
+            <div class="player__viewport"><div class="player__zoom-layer" data-scene></div></div>
+            <div class="overlay error-overlay" role="alert">
+              <div class="error-overlay__icon"><span class="icon" data-icon="alert"></span></div>
+              <div class="overlay__title">تعذّر تشغيل الفيديو</div>
+              <div class="overlay__sub">تحقّق من اتصالك. سنكمل من حيث توقفت.</div>
+              <div class="error-overlay__actions">
+                <button class="btn btn--primary"><span class="icon icon--sm" data-icon="refresh"></span>إعادة المحاولة</button>
+                <button class="btn btn--ghost">رجوع</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-block__label">إشعارات</div>
+        <div class="state-block toast-stack" id="toast-stack">
+          <div class="offline-banner"><span class="offline-banner__dot"></span>أنت غير متصل<span>تُعرض التنزيلات فقط</span></div>
+          <div class="toast toast--warning" style="animation-delay:.05s">
+            <div class="toast__icon"><span class="icon icon--md" data-icon="wifi"></span></div>
+            <div class="toast__body"><div class="toast__title">الاتصال ضعيف</div><div class="toast__text">خفّضنا الجودة إلى 480p لتجنّب التوقف.</div></div>
+            <button class="toast__action">تراجع</button>
+            <span class="toast__timer"></span>
+          </div>
+          <div class="toast toast--success" style="animation-delay:.12s">
+            <div class="toast__icon"><span class="icon icon--md" data-icon="done"></span></div>
+            <div class="toast__body"><div class="toast__title">تم تنزيل الدرس</div><div class="toast__text">«التكامل بالتعويض» متاح الآن دون اتصال.</div></div>
+            <span class="toast__timer"></span>
+          </div>
+          <div class="toast toast--info" style="animation-delay:.19s">
+            <div class="toast__icon"><span class="icon icon--md" data-icon="shield"></span></div>
+            <div class="toast__body"><div class="toast__title">يلزم التحقق</div><div class="toast__text">اتصل بالإنترنت مرة واحدة لمواصلة مشاهدة دروسك المحفوظة.</div></div>
+            <button class="toast__action">تحقّق الآن</button>
+          </div>
+          <div class="toast toast--error" style="animation-delay:.26s">
+            <div class="toast__icon"><span class="icon icon--md" data-icon="alert"></span></div>
+            <div class="toast__body"><div class="toast__title">تعذّر التنزيل</div><div class="toast__text">المساحة المتاحة غير كافية (يلزم 240 MB).</div></div>
+            <button class="toast__action">إدارة</button>
+          </div>
+        </div>
+
+        <div class="state-block__label">جارٍ التحميل</div>
+        <div class="state-block" style="display:flex;flex-direction:column;gap:10px;padding-bottom:48px">
+          <div class="skeleton-card"><div class="sk" style="width:104px;height:80px;border-radius:14px"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:4px"><div class="sk" style="height:14px;width:80%"></div><div class="sk" style="height:10px;width:95%"></div><div class="sk" style="height:10px;width:60%"></div></div></div>
+          <div class="skeleton-card"><div class="sk" style="width:104px;height:80px;border-radius:14px"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:4px"><div class="sk" style="height:14px;width:70%"></div><div class="sk" style="height:10px;width:90%"></div><div class="sk" style="height:10px;width:45%"></div></div></div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FRAME 6 — Fullscreen landscape player
+       =================================================================== -->
+  <section class="frame frame--wide" id="frame-fullscreen" aria-label="Fullscreen player">
+    <div class="frame__label">06 · ملء الشاشة <span>Fullscreen Landscape</span></div>
+    <div class="frame__scroller">
+      <div class="device device--player device--landscape" id="device-fullscreen">
+        <div class="player player--fill" id="player-fullscreen" data-duration="1450" data-position="898">
+          <div class="player__viewport"><div class="player__zoom-layer" data-scene></div></div>
+          <div class="player__scrim"></div>
+          <div class="player__watermark" style="top:26%;left:14%;font-size:13px">أحمد محمود · 0791 234 567</div>
+          <div class="player__watermark" style="top:62%;left:56%;font-size:13px">أحمد محمود · 0791 234 567</div>
+          <div class="player__topbar" style="top:16px;left:44px;right:44px">
+            <div class="player__tools">
+              <button class="p-btn glass" aria-label="رجوع"><span class="icon icon--md" data-icon="back"></span></button>
+              <div style="direction:rtl;color:#fff;margin-left:8px">
+                <div style="font-size:15px;font-weight:800;line-height:1.3">قواعد التكامل الأساسية</div>
+                <div style="font-size:11px;opacity:.7">الدرس 2 من 6 · التكامل وتطبيقاته</div>
+              </div>
+            </div>
+            <div class="player__tools">
+              <button class="p-chip glass" data-speed-label data-open-sheet>1.25×</button>
+              <button class="p-chip p-chip--hd glass" data-quality-label data-open-sheet>720p<sup>HD</sup></button>
+              <button class="p-btn glass" aria-label="الخروج من ملء الشاشة"><span class="icon icon--md" data-icon="fullscreenexit"></span></button>
+            </div>
+          </div>
+          <div class="skip-ripple skip-ripple--back" data-skip-ripple="back"><span class="icon icon--lg" data-icon="replay"></span>10 ث</div>
+          <div class="skip-ripple skip-ripple--fwd" data-skip-ripple="fwd">10 ث<span class="icon icon--lg flip-rtl" data-icon="replay"></span></div>
+          <div class="player__center" style="bottom:56px">
+            <button class="p-play glass" data-play style="width:72px;height:72px" aria-label="إيقاف مؤقت"><span class="icon icon--xl" data-icon="pause"></span></button>
+          </div>
+          <div class="player__bottom" style="left:44px;right:44px;bottom:16px;gap:8px">
+            <div class="timeline" role="slider" aria-label="موضع التشغيل" aria-valuemin="0" aria-valuemax="100">
+              <div class="timeline__track">
+                <div class="timeline__buffered" style="width:70%"></div>
+                <div class="timeline__played"></div>
+                <div class="timeline__tick" style="left:22%"></div>
+                <div class="timeline__tick" style="left:48%"></div>
+                <div class="timeline__tick" style="left:81%"></div>
+              </div>
+              <div class="timeline__thumb"></div>
+            </div>
+            <div class="player__controls">
+              <div class="player__controls-group" style="gap:8px">
+                <button class="skip-btn skip-btn--lg glass" data-skip="-10" aria-label="رجوع 10 ثوانٍ"><span class="icon icon--md" data-icon="replay"></span><span class="skip-btn__label">−10</span></button>
+                <button class="skip-btn skip-btn--lg glass" data-skip="10" aria-label="تقديم 10 ثوانٍ"><span class="skip-btn__label">+10</span><span class="icon icon--md flip-rtl" data-icon="replay"></span></button>
+                <span class="player__time num" style="font-size:13px"><b data-time-current>14:58</b> <span>/ 24:10</span></span>
+              </div>
+              <span class="player__remaining glass" data-remaining></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FRAME 7 — Design tokens
+       =================================================================== -->
+  <section class="frame frame--wide" id="frame-tokens" aria-label="Design tokens">
+    <div class="frame__label">07 · رموز التصميم <span>Design Tokens</span></div>
+    <div class="tokens">
+      <div>
+        <h3>الألوان · Color</h3>
+        <div class="swatches">
+          <div class="swatch"><i style="background:#1C74B9"></i><b>brand-600</b>#1C74B9</div>
+          <div class="swatch"><i style="background:#14568C"></i><b>brand-700</b>#14568C</div>
+          <div class="swatch"><i style="background:#4D9DD8"></i><b>brand-400</b>#4D9DD8</div>
+          <div class="swatch"><i style="background:#E65A1F"></i><b>accent</b>#E65A1F</div>
+          <div class="swatch"><i style="background:#16A34A"></i><b>success</b>#16A34A</div>
+          <div class="swatch"><i style="background:#D97706"></i><b>warning</b>#D97706</div>
+          <div class="swatch"><i style="background:#DC2626"></i><b>error</b>#DC2626</div>
+          <div class="swatch"><i style="background:#05080F"></i><b>player-bg</b>#05080F</div>
+          <div class="swatch"><i style="background:var(--bg)"></i><b>bg</b>theme</div>
+          <div class="swatch"><i style="background:var(--surface)"></i><b>surface</b>theme</div>
+          <div class="swatch"><i style="background:var(--ink-1)"></i><b>ink-1</b>theme</div>
+          <div class="swatch"><i style="background:var(--ink-2)"></i><b>ink-2</b>theme</div>
+        </div>
+      </div>
+      <div>
+        <h3>الخط · Cairo</h3>
+        <div class="type-scale">
+          <div><span style="font-size:22px;font-weight:800">عنوان رئيسي</span><small>22 / 800</small></div>
+          <div><span style="font-size:20px;font-weight:800">عنوان الدرس</span><small>20 / 800</small></div>
+          <div><span style="font-size:15px;font-weight:800">عنوان قسم</span><small>15 / 800</small></div>
+          <div><span style="font-size:14px;font-weight:700">عنوان بطاقة</span><small>14 / 700</small></div>
+          <div><span style="font-size:13.5px">نص الوصف</span><small>13.5 / 400 · 1.85</small></div>
+          <div><span style="font-size:11px;font-weight:700">شارة</span><small>11 / 700</small></div>
+        </div>
+      </div>
+      <div>
+        <h3>الزوايا · Radius</h3>
+        <div class="radii">
+          <div style="border-radius:10px">10</div><div style="border-radius:14px">14</div><div style="border-radius:18px">18</div><div style="border-radius:24px">24</div><div style="border-radius:999px">full</div>
+        </div>
+        <h3 style="margin-top:20px">المسافات · Spacing</h3>
+        <div class="spacing-row">
+          <div style="width:4px;height:4px"></div><div style="width:8px;height:8px"></div><div style="width:12px;height:12px"></div><div style="width:16px;height:16px"></div><div style="width:20px;height:20px"></div><div style="width:24px;height:24px"></div><div style="width:32px;height:32px"></div><div style="width:40px;height:40px"></div>
+        </div>
+        <h3 style="margin-top:20px">الحركة · Motion</h3>
+        <div style="font-size:12px;color:var(--ink-2)" class="ltr">fast 150ms · med 250ms · slow 400ms · easeOutCubic</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ---------------------------------------------------------------
+   Icons (Material Rounded paths), injected as inline SVG so design
+   import tools see real vector layers.
+   --------------------------------------------------------------- */
+const ICONS = {
+  play: 'M8 5.14v13.72a1 1 0 0 0 1.52.85l10.8-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z',
+  pause: 'M7 19h3a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1zm7-14a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-3z',
+  replay: 'M12 5V2.21a.5.5 0 0 0-.85-.36L7.35 5.65a.5.5 0 0 0 0 .7l3.8 3.8a.5.5 0 0 0 .85-.36V7a6 6 0 1 1-6 6.4.99.99 0 0 0-1-.9H5a1 1 0 0 0-1 1.07A8 8 0 1 0 12 5z',
+  fullscreen: 'M6 14a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h3a1 1 0 1 0 0-2H7v-2a1 1 0 0 0-1-1zm0-4a1 1 0 0 0 1-1V7h2a1 1 0 1 0 0-2H6a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1zm11 7h-2a1 1 0 1 0 0 2h3a1 1 0 0 0 1-1v-3a1 1 0 1 0-2 0v2zM14 6a1 1 0 0 0 1 1h2v2a1 1 0 1 0 2 0V6a1 1 0 0 0-1-1h-3a1 1 0 0 0-1 1z',
+  fullscreenexit: 'M6 16h2v2a1 1 0 1 0 2 0v-3a1 1 0 0 0-1-1H6a1 1 0 1 0 0 2zm2-8H6a1 1 0 1 0 0 2h3a1 1 0 0 0 1-1V6a1 1 0 1 0-2 0v2zm7 11a1 1 0 0 0 1-1v-2h2a1 1 0 1 0 0-2h-3a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1zm1-11V6a1 1 0 1 0-2 0v3a1 1 0 0 0 1 1h3a1 1 0 1 0 0-2h-2z',
+  check: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1.3 14.3a1 1 0 0 1-1.4 0l-3.6-3.6a1 1 0 1 1 1.4-1.4l2.9 2.89 6.3-6.3a1 1 0 1 1 1.4 1.42l-7 7z',
+  done: 'M6 19h12a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2zm3.3-3.6L5.4 11.5a1 1 0 0 1 1.4-1.4l3.2 3.18 7.2-7.2a1 1 0 1 1 1.4 1.42l-7.9 7.9a1 1 0 0 1-1.4 0z',
+  download: 'M16.59 9H15V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5H7.41a1 1 0 0 0-.7 1.71l4.59 4.59a1 1 0 0 0 1.41 0l4.59-4.59a1 1 0 0 0-.71-1.71zM5 19a1 1 0 0 0 1 1h12a1 1 0 1 0 0-2H6a1 1 0 0 0-1 1z',
+  offline: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm5 16H7v-2h10v2zm-6.7-3L7 11.7l1.4-1.4 1.9 1.88 5.3-5.28L17 8.3 10.3 15z',
+  wifi: 'M2.06 10.06a1 1 0 0 0 1.41 1.41 12 12 0 0 1 17.06 0 1 1 0 0 0 1.41-1.41 14 14 0 0 0-19.88 0zm8.17 7.71 1.06 1.06a1 1 0 0 0 1.42 0l1.06-1.06a1 1 0 0 0-.4-1.66 4 4 0 0 0-2.74 0 1 1 0 0 0-.4 1.66zm-3.95-3.95a1 1 0 0 0 1.4 1.4 6 6 0 0 1 8.64 0 1 1 0 0 0 1.4-1.4 8 8 0 0 0-11.44 0z',
+  alert: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 11a1 1 0 0 1-1-1V8a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1zm1 4h-2v-2h2v2z',
+  schedule: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-12.75a.75.75 0 0 0-1.5 0v5.18c0 .35.18.68.49.86l3.96 2.38a.75.75 0 1 0 .77-1.29L12.5 12.2V7.25z',
+  back: 'M19 11H7.83l4.88-4.88a1 1 0 1 0-1.42-1.41l-6.58 6.58a1 1 0 0 0 0 1.41l6.58 6.59a1 1 0 1 0 1.42-1.41L7.83 13H19a1 1 0 1 0 0-2z',
+  chevron: 'M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.41 1.41l4.59-4.59a1 1 0 0 0 0-1.41L10.7 6.7a1 1 0 0 0-1.41.01z',
+  search: 'M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l4.25 4.25a1.06 1.06 0 1 0 1.49-1.49L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z',
+  more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  close: 'M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z',
+  refresh: 'M17.65 6.35A7.96 7.96 0 0 0 11.4 4.02C7.75 4.29 4.6 7.2 4.09 10.83A8 8 0 0 0 12 20a7.99 7.99 0 0 0 7.21-4.55c.33-.69-.17-1.45-.93-1.45-.37 0-.72.2-.88.53A6 6 0 0 1 12 18a6 6 0 0 1 0-12c1.66 0 3.14.69 4.22 1.78l-1.51 1.51c-.63.63-.19 1.71.7 1.71H19a1 1 0 0 0 1-1V6.41c0-.89-1.08-1.34-1.71-.71l-.64.65z',
+  cloud: 'M19.35 10.04A7.49 7.49 0 0 0 12 4a7.48 7.48 0 0 0-6.65 4.04A5.99 5.99 0 0 0 6 20h13a5 5 0 0 0 .35-9.96z',
+  shield: 'M11.19 1.36 4.19 4.47A2 2 0 0 0 3 6.3V11c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6.3a2 2 0 0 0-1.19-1.83l-7-3.11a2 2 0 0 0-1.62 0zm-1.9 14.93-2.59-2.59a1 1 0 1 1 1.41-1.41L10 14.17l5.88-5.88a1 1 0 1 1 1.41 1.41l-6.59 6.59a1 1 0 0 1-1.41 0z',
+  speed: 'M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z',
+  hd: 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-8 11.25a.75.75 0 0 1-1.5 0V13h-2v1.25a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 1.5 0v1.75h2V9.75a.75.75 0 0 1 1.5 0v4.5zM18 14a1 1 0 0 1-1 1h-3.25a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 1 .75-.75H17a1 1 0 0 1 1 1v4zm-3.5-.5h2v-3h-2v3z',
+  zoomreset: 'M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z',
+  pinch: 'M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l4.25 4.25a1.06 1.06 0 1 0 1.49-1.49L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zM10 7H9v2H7v1h2v2h1v-2h2V9h-2V7z',
+  pan: 'M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z',
+  doc: 'M14.59 2.59A2 2 0 0 0 13.17 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.83a2 2 0 0 0-.59-1.41l-4.82-4.83zM15 18H9a1 1 0 1 1 0-2h6a1 1 0 1 1 0 2zm0-4H9a1 1 0 1 1 0-2h6a1 1 0 1 1 0 2zm-2-6V3.5L18.5 9H14a1 1 0 0 1-1-1z',
+  info: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 15a1 1 0 0 1-1-1v-4a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1zm1-8h-2V7h2v2z',
+  bolt: 'M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z'
+};
+function renderIcons(root = document) {
+  root.querySelectorAll('[data-icon]').forEach(el => {
+    const d = ICONS[el.dataset.icon];
+    if (d) el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+  });
+}
+
+/* ---------------------------------------------------------------
+   Lesson scene (stand-in for the video frame): a digital board with
+   y = x², the shaded area, and the worked equations.
+   --------------------------------------------------------------- */
+let sceneId = 0;
+function sceneSVG() {
+  const id = 'sc' + (++sceneId);
+  return `<svg viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice" direction="ltr" role="img" aria-label="لقطة من الدرس">
+    <defs>
+      <linearGradient id="${id}-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B2236"/><stop offset="1" stop-color="#123C5C"/></linearGradient>
+      <pattern id="${id}-grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="rgba(255,255,255,.06)"/></pattern>
+      <linearGradient id="${id}-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E65A1F" stop-opacity=".55"/><stop offset="1" stop-color="#E65A1F" stop-opacity=".08"/></linearGradient>
+    </defs>
+    <rect width="640" height="360" fill="url(#${id}-bg)"/>
+    <rect width="640" height="360" fill="url(#${id}-grid)"/>
+    <g stroke="rgba(255,255,255,.55)" stroke-width="2" fill="none"><path d="M60 290H330"/><path d="M80 310V90"/></g>
+    <path d="M80 290 Q170 290 240 205 L240 290 Z" fill="url(#${id}-area)"/>
+    <path d="M80 290 Q190 292 300 110" stroke="#4D9DD8" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <text x="250" y="120" fill="#4D9DD8" font-size="20" font-family="Georgia,serif" font-style="italic">y = x²</text>
+    <text x="234" y="312" fill="rgba(255,255,255,.7)" font-size="14" font-family="Georgia,serif">2</text>
+    <text x="74" y="312" fill="rgba(255,255,255,.7)" font-size="14" font-family="Georgia,serif">0</text>
+    <g font-family="Georgia,serif" fill="#F8FAFC">
+      <text x="372" y="96" font-size="21">∫ xⁿ dx = xⁿ⁺¹ ⁄ (n+1) + C</text>
+      <text x="372" y="146" font-size="21">∫ k dx = kx + C</text>
+      <text x="372" y="196" font-size="21" fill="rgba(248,250,252,.75)">∫ (f ± g) dx = ∫f ± ∫g</text>
+      <rect x="380" y="224" width="200" height="60" rx="10" fill="rgba(230,90,31,.12)" stroke="#E65A1F" stroke-width="2"/>
+      <text x="398" y="263" font-size="24" font-weight="bold">∫₀² x² dx = 8⁄3</text>
+    </g>
+    <path d="M590 240 q14 22 -6 44" stroke="#FBBF24" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="560" cy="300" r="4" fill="#FBBF24"/>
+  </svg>`;
+}
+document.querySelectorAll('[data-scene], [data-scene-mini]').forEach(el => { el.innerHTML = sceneSVG(); });
+
+renderIcons();
+
+/* ---------------------------------------------------------------
+   Theme toggle (light / auto / dark)
+   --------------------------------------------------------------- */
+const themeButtons = document.querySelectorAll('[data-theme-set]');
+function applyTheme(mode) {
+  if (mode === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', mode);
+  themeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === mode)));
+  try { localStorage.setItem('thiqa-preview-theme', mode); } catch (e) {}
+}
+let savedTheme = 'auto';
+try { savedTheme = localStorage.getItem('thiqa-preview-theme') || 'auto'; } catch (e) {}
+applyTheme(savedTheme);
+themeButtons.forEach(b => b.addEventListener('click', () => applyTheme(b.dataset.themeSet)));
+
+/* ---------------------------------------------------------------
+   Filter chips
+   --------------------------------------------------------------- */
+document.querySelectorAll('#lesson-filters .filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#lesson-filters .filter-chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', 'true');
+  });
+});
+
+/* ---------------------------------------------------------------
+   Play / pause
+   --------------------------------------------------------------- */
+function bindPlay(btn) {
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const playing = btn.querySelector('[data-icon]').dataset.icon === 'pause';
+    btn.querySelector('[data-icon]').dataset.icon = playing ? 'play' : 'pause';
+    btn.setAttribute('aria-label', playing ? 'تشغيل' : 'إيقاف مؤقت');
+    renderIcons(btn);
+  });
+}
+bindPlay(document.getElementById('play-toggle'));
+bindPlay(document.getElementById('zoom-play'));
+document.querySelectorAll('[data-play]').forEach(bindPlay);
+
+/* ---------------------------------------------------------------
+   Description expand
+   --------------------------------------------------------------- */
+const descCard = document.getElementById('desc-card');
+document.getElementById('desc-toggle').addEventListener('click', e => {
+  const open = descCard.classList.toggle('is-open');
+  e.currentTarget.textContent = open ? 'عرض أقل' : 'عرض المزيد';
+  e.currentTarget.setAttribute('aria-expanded', String(open));
+});
+
+/* ---------------------------------------------------------------
+   Shared formatting
+   --------------------------------------------------------------- */
+const LESSON_SECONDS = 24 * 60 + 10;          // «قواعد التكامل الأساسية»
+const CHAPTER_SECONDS = 134 * 60;             // 6 lessons · 2h 14m
+let currentSpeed = 1.25;
+const fmtSpeed = s => (Number.isInteger(s) ? s.toFixed(0) : String(s)) + '×';
+const fmtDur = sec => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
+const bdiSpeed = s => `<bdi dir="ltr">${fmtSpeed(s)}</bdi>`;
+
+/* Arabic counted nouns: 1 / 2 (dual) / 3–10 (plural) / 11+ (singular) */
+function arUnit(n, [one, two, few, many]) {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  if (n >= 3 && n <= 10) return `${n} ${few}`;
+  return `${n} ${many}`;
+}
+const AR_HOUR = ['ساعة', 'ساعتين', 'ساعات', 'ساعة'];
+const AR_MIN = ['دقيقة واحدة', 'دقيقتين', 'دقائق', 'دقيقة'];
+const AR_SEC = ['ثانية واحدة', 'ثانيتين', 'ثوانٍ', 'ثانية'];
+function arDuration(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const parts = [];
+  if (sec >= 600) {                        // ≥ 10 min: whole minutes read better
+    let m = Math.round(sec / 60);
+    const h = Math.floor(m / 60); m %= 60;
+    if (h) parts.push(arUnit(h, AR_HOUR));
+    if (m) parts.push(arUnit(m, AR_MIN));
+  } else {
+    const m = Math.floor(sec / 60), s = sec % 60;
+    if (m) parts.push(arUnit(m, AR_MIN));
+    if (s || !m) parts.push(arUnit(s, AR_SEC));
+  }
+  return parts.join(' و');
+}
+
+/* ---------------------------------------------------------------
+   Players: skip ±10s, timeline + remaining time at current speed
+   --------------------------------------------------------------- */
+const players = [...document.querySelectorAll('.player[data-duration]')];
+function renderPlayer(p) {
+  const d = Number(p.dataset.duration), pos = Number(p.dataset.position);
+  const pct = (pos / d) * 100;
+  p.querySelector('.timeline__played').style.width = pct + '%';
+  p.querySelector('.timeline__thumb').style.left = pct + '%';
+  p.querySelector('.timeline').setAttribute('aria-valuenow', String(Math.round(pct)));
+  p.querySelector('[data-time-current]').textContent = fmtDur(pos);
+  const rem = p.querySelector('[data-remaining]');
+  rem.setAttribute('dir', 'rtl');
+  rem.innerHTML = `متبقٍ <b class="num">${fmtDur((d - pos) / currentSpeed)}</b> بسرعة ${bdiSpeed(currentSpeed)}`;
+}
+players.forEach(p => {
+  renderPlayer(p);
+  p.querySelectorAll('[data-skip]').forEach(btn => btn.addEventListener('click', () => {
+    const step = Number(btn.dataset.skip);
+    const d = Number(p.dataset.duration);
+    p.dataset.position = String(Math.min(d, Math.max(0, Number(p.dataset.position) + step)));
+    renderPlayer(p);
+    btn.classList.remove('is-pulsing'); void btn.offsetWidth; btn.classList.add('is-pulsing');
+    const ripple = p.querySelector(`[data-skip-ripple="${step < 0 ? 'back' : 'fwd'}"]`);
+    ripple.classList.add('is-visible');
+    clearTimeout(ripple._t);
+    ripple._t = setTimeout(() => ripple.classList.remove('is-visible'), 650);
+  }));
+});
+
+/* ---------------------------------------------------------------
+   Speed picker + time-saved indicator (sheet card & lesson pill)
+   --------------------------------------------------------------- */
+function renderTimeSaved(speed) {
+  const total = LESSON_SECONDS / speed;
+  const save = LESSON_SECONDS - total;
+  const chapterSave = CHAPTER_SECONDS - CHAPTER_SECONDS / speed;
+  const mode = speed > 1 ? 'faster' : speed < 1 ? 'slower' : 'normal';
+  let title, sub, compact;
+  if (mode === 'faster') {
+    title = `عند المشاهدة بسرعة ${bdiSpeed(speed)}، ستوفّر <strong>${arDuration(save)}</strong> من هذا الدرس!`;
+    sub = `وعلى مستوى الفصل كاملًا (6 دروس) توفّر ${arDuration(chapterSave)}. تُحفظ السرعة لكل الدروس.`;
+    compact = `بسرعة ${bdiSpeed(speed)} توفّر <strong>${arDuration(save)}</strong> من هذا الدرس`;
+  } else if (mode === 'normal') {
+    const try125 = LESSON_SECONDS - LESSON_SECONDS / 1.25;
+    title = `السرعة العادية: مدة الدرس <strong class="num">${fmtDur(total)}</strong>`;
+    sub = `جرّب ${bdiSpeed(1.25)} لتوفّر ${arDuration(try125)} مع بقاء الشرح واضحًا.`;
+    compact = `جرّب ${bdiSpeed(1.25)} ووفّر <strong>${arDuration(try125)}</strong> من هذا الدرس`;
+  } else {
+    title = `سرعة أبطأ لفهم أعمق: <strong>+${arDuration(-save)}</strong> على مدة الدرس`;
+    sub = 'مناسبة للمسائل المحلولة والأجزاء الصعبة من الشرح.';
+    compact = `بسرعة ${bdiSpeed(speed)}: <strong>+${arDuration(-save)}</strong> لفهم أعمق`;
+  }
+  document.querySelectorAll('[data-time-saved]').forEach(el => {
+    el.classList.toggle('time-saved--slower', mode === 'slower');
+    el.classList.toggle('time-saved--normal', mode === 'normal');
+    const text = el.querySelector('[data-time-saved-text]');
+    text.innerHTML = el.dataset.timeSaved === 'compact' ? compact : title;
+    const subEl = el.querySelector('[data-time-saved-sub]');
+    if (subEl) subEl.textContent = sub;
+  });
+  // Meter: both bars scaled to the longer of the two durations.
+  const longest = Math.max(LESSON_SECONDS, total);
+  document.querySelectorAll('.time-saved__meter').forEach(m => {
+    m.querySelector('.time-saved__bar:not(.time-saved__bar--speed) i').style.width = (LESSON_SECONDS / longest) * 100 + '%';
+    m.querySelector('[data-meter-bar]').style.width = (total / longest) * 100 + '%';
+    m.querySelector('[data-meter-speed]').textContent = fmtSpeed(speed);
+    m.querySelector('[data-meter-time]').textContent = fmtDur(total);
+  });
+}
+function setSpeed(speed) {
+  currentSpeed = speed;
+  document.querySelectorAll('#speed-picker .speed-picker__opt').forEach(o =>
+    o.setAttribute('aria-checked', String(Number(o.dataset.speed) === speed)));
+  document.querySelectorAll('[data-speed-label]').forEach(l => { l.textContent = fmtSpeed(speed); });
+  renderTimeSaved(speed);
+  players.forEach(renderPlayer);
+}
+document.querySelectorAll('#speed-picker .speed-picker__opt').forEach(o =>
+  o.addEventListener('click', () => setSpeed(Number(o.dataset.speed))));
+setSpeed(1.25);
+
+/* ---------------------------------------------------------------
+   Quality picker
+   --------------------------------------------------------------- */
+function setQuality(q) {
+  document.querySelectorAll('#quality-list .quality-opt').forEach(o => o.setAttribute('aria-checked', String(o.dataset.quality === q)));
+  const hd = q === '720p' || q === '1080p';
+  document.querySelectorAll('[data-quality-label]').forEach(l => {
+    l.innerHTML = l.classList.contains('p-chip') && hd ? `${q}<sup>${q === '1080p' ? 'FHD' : 'HD'}</sup>` : q;
+  });
+}
+document.querySelectorAll('#quality-list .quality-opt').forEach(o => o.addEventListener('click', () => setQuality(o.dataset.quality)));
+
+/* Chips that open the sheet scroll the sheet frame into view */
+document.querySelectorAll('[data-open-sheet]').forEach(b => b.addEventListener('click', () => {
+  if (b.closest('#frame-playback-sheet')) return;
+  document.getElementById('frame-playback-sheet').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}));
+
+/* ---------------------------------------------------------------
+   Zoom mode — one state drives the video, the vertical rail, the
+   panel slider, the presets, and the PiP mini-map.
+   State: z (1–4) and the viewport centre (cx, cy) in % of the frame.
+   --------------------------------------------------------------- */
+const ZMIN = 1, ZMAX = 4;
+const zoomState = { z: 2.4, cx: 72, cy: 70 };   // centred on the boxed result ∫₀² x² dx = 8⁄3
+const $ = id => document.getElementById(id);
+const zLabel = z => (Math.round(z * 10) / 10).toString() + '×';
+
+function clampCentre() {
+  const half = 50 / zoomState.z;                       // half the viewport, in %
+  zoomState.cx = Math.min(100 - half, Math.max(half, zoomState.cx));
+  zoomState.cy = Math.min(100 - half, Math.max(half, zoomState.cy));
+}
+function renderZoom() {
+  clampCentre();
+  const { z, cx, cy } = zoomState;
+  const size = 100 / z;                                // viewport share of the frame
+  const left = cx - size / 2, top = cy - size / 2;
+  // origin 0 0: translate by the viewport's top-left (scaled), then scale
+  const layer = $('zoom-layer');
+  layer.style.transformOrigin = '0 0';
+  layer.style.transform = `translate(${-left * z}%, ${-top * z}%) scale(${z})`;
+
+  const view = $('minimap-view');
+  view.style.width = size + '%'; view.style.height = size + '%';
+  view.style.left = left + '%'; view.style.top = top + '%';
+
+  const pct = ((z - ZMIN) / (ZMAX - ZMIN)) * 100;
+  $('zoom-fill').style.width = pct + '%';
+  $('zoom-knob').style.left = pct + '%';
+  $('zoom-rail-fill').style.height = pct + '%';
+  $('zoom-rail-knob').style.bottom = pct + '%';
+  ['zoom-control', 'zoom-rail'].forEach(id => { $(id).setAttribute('aria-valuenow', z.toFixed(1)); $(id).setAttribute('aria-valuetext', zLabel(z)); });
+
+  const label = zLabel(z);
+  $('zoom-value').textContent = label;
+  $('zoom-badge-value').textContent = label;
+  $('minimap-zoom').textContent = label;
+  $('zoom-area').textContent = Math.round(100 / (z * z)) + '%';
+  const h = cx < 40 ? 'يسار' : cx > 60 ? 'يمين' : 'وسط';
+  const v = cy < 40 ? 'أعلى' : cy > 60 ? 'أسفل' : 'وسط';
+  $('zoom-pos').textContent = z <= 1.01 ? 'الإطار كاملًا' : (h === 'وسط' && v === 'وسط') ? 'المنتصف' : `${h} · ${v}`;
+  document.querySelectorAll('#zoom-presets .zoom-presets__opt').forEach(b =>
+    b.setAttribute('aria-pressed', String(Math.abs(Number(b.dataset.zoom) - z) < 0.05)));
+}
+function setZoom(z) {
+  zoomState.z = Math.min(ZMAX, Math.max(ZMIN, Math.round(z * 10) / 10));
+  renderZoom();
+}
+
+/* Drag helper: maps a pointer position on `el` to a 0–1 fraction */
+function draggable(el, onFraction, axis = 'x') {
+  const host = el.closest('.zoom-rail, .zoom-slider__control, .minimap') || el;
+  const update = e => {
+    const r = el.getBoundingClientRect();
+    const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    onFraction(axis === 'x' ? fx : axis === 'y' ? 1 - fy : { fx, fy });
+  };
+  el.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    host.classList.add('is-dragging');
+    el.setPointerCapture(e.pointerId);
+    update(e);
+    const move = ev => update(ev);
+    const up = () => { host.classList.remove('is-dragging'); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+  });
+}
+draggable($('zoom-control'), f => setZoom(ZMIN + f * (ZMAX - ZMIN)), 'x');
+draggable($('zoom-rail-track'), f => setZoom(ZMIN + f * (ZMAX - ZMIN)), 'y');
+draggable(document.querySelector('#minimap .minimap__frame'), ({ fx, fy }) => {
+  zoomState.cx = fx * 100; zoomState.cy = fy * 100; renderZoom();
+}, 'xy');
+
+$('zoom-control').addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { setZoom(zoomState.z + 0.1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { setZoom(zoomState.z - 0.1); e.preventDefault(); }
+});
+document.querySelectorAll('[data-zoom-step]').forEach(b => b.addEventListener('click', () => setZoom(zoomState.z + Number(b.dataset.zoomStep))));
+document.querySelectorAll('#zoom-presets .zoom-presets__opt').forEach(b => b.addEventListener('click', () => setZoom(Number(b.dataset.zoom))));
+$('zoom-reset').addEventListener('click', () => setZoom(1));
+setZoom(2.4);
+
+/* ---------------------------------------------------------------
+   Retry ladder demo — 1s, 2s, 4s, 8s backoff, then loops
+   --------------------------------------------------------------- */
+(function retryDemo() {
+  const steps = [...document.querySelectorAll('#retry-steps i')];
+  const attemptEl = document.getElementById('retry-attempt');
+  const countEl = document.getElementById('retry-count');
+  let attempt = 1, remaining = 1;
+  function paint() {
+    steps.forEach((s, i) => { s.className = i < attempt - 1 ? 'is-done' : i === attempt - 1 ? 'is-now' : ''; });
+    attemptEl.textContent = attempt; countEl.textContent = remaining;
+  }
+  paint();
+  setInterval(() => {
+    remaining--;
+    if (remaining <= 0) { attempt = attempt >= 4 ? 1 : attempt + 1; remaining = 2 ** (attempt - 1); }
+    paint();
+  }, 1000);
+})();
+</script>
+</body>
+</html>

@@ -15,8 +15,22 @@ class VideoStreamInfo extends Equatable {
   /// ISO expiry of the signed URL (production only), else null.
   final String? expiresAt;
 
-  const VideoStreamInfo({required this.url, required this.isBunny, this.thumbnailUrl, this.expiresAt});
+  /// Rendition [url] points at (e.g. "480p"), when the backend reports it.
+  final String? resolution;
+
+  /// Every encoded rendition → its signed URL (e.g. {"720p": …, "480p": …}),
+  /// best first. Empty on older backends or when Bunny's status was unknown.
+  final Map<String, String> renditions;
+
+  const VideoStreamInfo({
+    required this.url,
+    required this.isBunny,
+    this.thumbnailUrl,
+    this.expiresAt,
+    this.resolution,
+    this.renditions = const {},
+  });
 
   @override
-  List<Object?> get props => [url, isBunny, thumbnailUrl, expiresAt];
+  List<Object?> get props => [url, isBunny, thumbnailUrl, expiresAt, resolution, renditions];
 }
